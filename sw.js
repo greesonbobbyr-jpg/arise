@@ -1,6 +1,6 @@
 /* Arise service worker — precache the app shell so it opens with no network,
    and fire a best-effort "rest over" notification when the page asks for one. */
-const VERSION = 'arise-v4';
+const VERSION = 'arise-v5';
 const SHELL = [
   './',
   './index.html',
