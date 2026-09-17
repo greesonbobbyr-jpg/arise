@@ -1,0 +1,1194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0A0B0F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Strength log that tells you how much stronger you got, and what to do when a lift stalls.">
+<title>Arise</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#0A0B0F; --s1:#14161C; --s2:#1B1E26; --s3:#232732;
+  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+  --tx:#F2F4F8; --tx2:#9AA3B2; --tx3:#5F6776;
+  --cy:#3EE6FF; --cy-tint:rgba(62,230,255,.13); --cy-line:rgba(62,230,255,.35); --cy-ink:#061014;
+  --gr:#B6FF3B; --gr-tint:rgba(182,255,59,.13);
+  --rd:#FF5C5C; --rd-tint:rgba(255,92,92,.12);
+  --r:12px; --t:160ms;
+  --f-ui:"Geist",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-num:"Geist Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --fs-s:13px; --fs-m:15px; --fs-l:20px; --fs-xl:34px;
+  --tabs:64px; --sab:env(safe-area-inset-bottom,0px); --sat:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--f-ui);font-size:var(--fs-m);line-height:1.4;overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{overscroll-behavior-y:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
+input,select,textarea{font:inherit;color:inherit}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600}
+.mono{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--tx2)}.dim{color:var(--tx3)}.cy{color:var(--cy)}.gr{color:var(--gr)}.rd{color:var(--rd)}
+.small{font-size:var(--fs-s)}
+.kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);font-weight:600}
+h1{font-size:var(--fs-l);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+h2{font-size:var(--fs-m);font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+#app{min-height:100%;padding-bottom:calc(var(--tabs) + var(--sab) + 12px)}
+.screen{padding:calc(12px + var(--sat)) 16px 24px;max-width:560px;margin:0 auto;animation:fade var(--t) ease-out}
+@keyframes fade{from{opacity:.4}to{opacity:1}}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin-bottom:14px}
+.top h1{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card{background:var(--s1);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.card.lift{padding:16px}
+.hair{border-top:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.stack>*+*{margin-top:8px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:var(--r);font-weight:600;font-size:var(--fs-m);transition:transform var(--t),background var(--t),opacity var(--t);user-select:none}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--cy);color:var(--cy-ink);box-shadow:0 0 0 1px rgba(62,230,255,.2),0 8px 28px -10px rgba(62,230,255,.7)}
+.btn.ghost{background:var(--s2);color:var(--tx)}
+.btn.line{background:transparent;box-shadow:inset 0 0 0 1px var(--line2)}
+.btn.danger{background:var(--rd-tint);color:var(--rd)}
+.btn.full{width:100%}
+.btn.sm{min-height:40px;padding:0 14px;font-size:var(--fs-s)}
+.btn:disabled{opacity:.4;pointer-events:none}
+.icon-btn{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r);color:var(--tx2)}
+.icon-btn:active{background:var(--s2)}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* inputs */
+.field{display:block;margin-bottom:12px}
+.field label{display:block;font-size:var(--fs-s);color:var(--tx2);margin-bottom:6px}
+.in{width:100%;min-height:48px;background:var(--s2);border:0;border-radius:var(--r);padding:0 14px;color:var(--tx);outline:none;transition:box-shadow var(--t)}
+.in:focus{box-shadow:inset 0 0 0 1.5px var(--cy)}
+.in.num{text-align:center;font-size:var(--fs-l)}
+select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--tx2) 50%),linear-gradient(135deg,var(--tx2) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 15px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.seg{display:flex;background:var(--s2);border-radius:var(--r);padding:3px;gap:3px}
+.seg button{flex:1;min-height:42px;border-radius:9px;color:var(--tx2);font-weight:600}
+.seg button.on{background:var(--s3);color:var(--cy)}
+
+/* tab bar */
+.tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tabs) + var(--sab));padding-bottom:var(--sab);background:var(--s1);border-top:1px solid var(--line);display:flex;z-index:30}
+.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--tx3);font-size:11px;font-weight:600;letter-spacing:.04em}
+.tabs button.on{color:var(--cy)}
+.tabs svg.i{width:24px;height:24px}
+
+/* rest bar */
+.rest{position:fixed;left:12px;right:12px;bottom:calc(var(--tabs) + var(--sab) + 10px);background:var(--s2);border-radius:var(--r);box-shadow:0 12px 30px -10px rgba(0,0,0,.8),0 0 0 1px var(--line);z-index:29;overflow:hidden;transform:translateY(120%);transition:transform var(--t)}
+.rest.on{transform:none}
+.rest .bar{position:absolute;left:0;top:0;bottom:0;background:var(--cy-tint);transition:width 1s linear}
+.rest .inner{position:relative;display:flex;align-items:center;gap:8px;padding:8px 8px 8px 16px;min-height:52px}
+.rest .time{font-size:var(--fs-l);color:var(--cy);min-width:64px}
+.rest .btn{min-height:40px;padding:0 14px}
+
+/* level ring / hero */
+.hero{display:flex;align-items:center;gap:16px}
+.ring{position:relative;width:76px;height:76px;flex:none}
+.ring svg{width:76px;height:76px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:5}
+.ring .bg{stroke:var(--s3)}
+.ring .fg{stroke:var(--cy);stroke-linecap:round;transition:stroke-dashoffset 400ms ease}
+.ring .rank{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-num);font-size:30px;font-weight:700;color:var(--cy);letter-spacing:-.02em}
+.bigval{font-size:var(--fs-xl);line-height:1;letter-spacing:-.02em}
+.prog{height:6px;background:var(--s3);border-radius:3px;overflow:hidden}
+.prog>i{display:block;height:100%;background:var(--cy);border-radius:3px;transition:width 400ms ease}
+.prog.green>i{background:var(--gr)}
+
+/* workout set table */
+.exh{display:flex;align-items:center;gap:8px;margin:0 0 6px;min-height:44px}
+.exh h2{flex:1;min-width:0;font-size:17px}
+.thead,.set{display:grid;grid-template-columns:44px 1fr 1fr 1fr 48px;gap:6px;align-items:center}
+.thead{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);font-weight:600;text-align:center;padding:2px 0 6px}
+.thead>:first-child{text-align:left;padding-left:8px}
+.set-wrap{position:relative;overflow:hidden;border-radius:10px;margin-bottom:6px}
+.set-del{position:absolute;right:0;top:0;bottom:0;width:80px;background:var(--rd);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:var(--fs-s);border-radius:0 10px 10px 0}
+.set{position:relative;background:var(--s1);padding:4px 4px 4px 0;border-radius:10px;transition:transform var(--t),background var(--t);touch-action:pan-y}
+.set.done{background:#11272E}
+.set.done .in{background:transparent}
+.set.pr{animation:prflash 700ms ease-out}
+@keyframes prflash{0%{background:#202B15;box-shadow:0 0 0 2px var(--gr)}100%{background:#11272E;box-shadow:none}}
+.set .n{height:44px;display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--tx2);border-radius:8px;font-family:var(--f-num)}
+.set .n.w{color:var(--cy);font-size:var(--fs-s);letter-spacing:.06em}
+.set .prev{height:48px;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-family:var(--f-num);font-size:var(--fs-m);font-weight:500;border-radius:8px}
+.set .prev:active{background:var(--s3);color:var(--tx)}
+.set .in{height:48px;min-height:0;padding:0 4px;font-size:18px}
+.set .ck{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--s2);color:var(--tx3);transition:background var(--t),color var(--t)}
+.set.done .ck{background:var(--cy);color:var(--cy-ink);box-shadow:0 4px 16px -6px rgba(62,230,255,.7)}
+.set.done .ck svg{animation:pop 200ms ease-out}
+@keyframes pop{from{transform:scale(.6)}to{transform:scale(1)}}
+.exstats{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 8px 2px;font-size:var(--fs-s);color:var(--tx2);min-height:28px}
+.badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.badge.pr{background:var(--gr-tint);color:var(--gr)}
+.badge.stall{background:var(--rd-tint);color:var(--rd)}
+.badge.cy{background:var(--cy-tint);color:var(--cy)}
+.badge.dimb{background:var(--s2);color:var(--tx2)}
+.addset{width:100%;min-height:44px;color:var(--tx2);font-weight:600;border-radius:10px;background:var(--s1);margin-top:2px}
+.addset:active{background:var(--s2)}
+.exblock{margin-bottom:20px}
+.name-in{background:transparent;border:0;outline:none;font-weight:700;font-size:var(--fs-l);letter-spacing:.02em;width:100%;min-height:44px;border-radius:8px;padding:0 6px;margin-left:-6px}
+.name-in:focus{background:var(--s1)}
+.timer{color:var(--tx2);font-size:var(--fs-m)}
+
+/* list rows */
+.lrow{display:flex;align-items:center;gap:12px;min-height:56px;padding:6px 4px;border-radius:10px}
+.lrow:active{background:var(--s2)}
+.lrow .t{font-weight:600}
+.lrow .s{font-size:var(--fs-s);color:var(--tx3)}
+.lrow+.lrow{border-top:1px solid var(--line)}
+.chk{width:26px;height:26px;border-radius:8px;box-shadow:inset 0 0 0 1.5px var(--line2);display:flex;align-items:center;justify-content:center;color:var(--cy-ink);flex:none}
+.chk.on{background:var(--cy);box-shadow:none}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;opacity:0;pointer-events:none;transition:opacity var(--t)}
+.sheet-bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;top:calc(var(--sat) + 40px);background:var(--bg);border-radius:18px 18px 0 0;z-index:41;transform:translateY(100%);transition:transform 200ms ease-out;display:flex;flex-direction:column;box-shadow:0 -1px 0 var(--line)}
+.sheet.on{transform:none}
+.sheet .sh{padding:12px 16px 8px}
+.sheet .body{flex:1;overflow-y:auto;padding:0 16px;-webkit-overflow-scrolling:touch}
+.sheet .foot{padding:10px 16px calc(12px + var(--sab));border-top:1px solid var(--line);background:var(--s1)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:8px 0 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:36px;padding:0 14px;border-radius:18px;background:var(--s2);color:var(--tx2);font-size:var(--fs-s);font-weight:600;white-space:nowrap}
+.chip.on{background:var(--cy);color:var(--cy-ink)}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity var(--t)}
+.modal-bg.on{opacity:1;pointer-events:auto}
+.modal{width:100%;max-width:560px;background:var(--s1);border-radius:18px 18px 0 0;padding:20px 16px calc(16px + var(--sab));transform:translateY(20px);transition:transform var(--t);max-height:90vh;overflow-y:auto}
+.modal-bg.on .modal{transform:none}
+.modal h2{font-size:var(--fs-l);margin-bottom:8px}
+.modal p{color:var(--tx2);margin-bottom:12px}
+.modal .acts{display:flex;gap:10px;margin-top:16px}
+.modal .acts .btn{flex:1}
+.toast{position:fixed;left:16px;right:16px;top:calc(var(--sat) + 12px);z-index:60;background:var(--s3);color:var(--tx);padding:12px 16px;border-radius:var(--r);font-weight:600;box-shadow:0 10px 30px -10px rgba(0,0,0,.8),0 0 0 1px var(--line);transform:translateY(-140%);transition:transform 200ms ease-out;text-align:center}
+.toast.on{transform:none}
+.toast.pr{color:var(--gr);box-shadow:0 10px 30px -10px rgba(0,0,0,.8),0 0 0 1px rgba(182,255,59,.4)}
+
+/* progress */
+.readout{font-size:17px;line-height:1.5;font-weight:500}
+.spark{width:100%;height:44px;display:block}
+.tier{margin-top:12px}
+.tier .segs{display:flex;gap:3px;height:10px}
+.tier .segs i{flex:1;position:relative;background:var(--s3);border-radius:3px;overflow:hidden}
+.tier .segs i b{position:absolute;left:0;top:0;bottom:0;background:var(--cy-line);border-radius:3px}
+.tier .segs i u{position:absolute;left:0;top:0;bottom:0;background:var(--cy);border-radius:3px}
+.tier .labs{display:flex;margin-top:5px}
+.tier .labs span{flex:1;text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.tier .labs span.on{color:var(--cy)}
+.callout{margin-top:12px;padding:12px 14px;background:var(--rd-tint);border-left:3px solid var(--rd);border-radius:8px}
+.callout b{display:block;color:var(--rd);margin-bottom:4px}
+.callout p{color:var(--tx);font-size:var(--fs-s);line-height:1.45}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat3 .card{margin:0;padding:12px}
+.stat3 .v{font-size:24px}
+.bodymap{display:flex;justify-content:center;gap:24px;padding:6px 0 2px}
+.bodymap svg{height:150px;width:auto}
+.bodymap .m{fill:var(--s3)}
+.bodymap .g{fill:var(--cy)}
+.bodymap .sil{fill:none;stroke:var(--line2);stroke-width:1.2}
+.ach{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ach .a{background:var(--s2);border-radius:10px;padding:10px 8px;text-align:center;min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.ach .a .n{font-weight:700;font-size:var(--fs-s)}
+.ach .a .d{font-size:11px;color:var(--tx3);line-height:1.25}
+.ach .a.on{box-shadow:inset 0 0 0 1.5px var(--cy-line)}
+.ach .a.on .n{color:var(--cy)}
+.ach .a .dot{width:10px;height:10px;border-radius:50%;background:var(--s3)}
+.ach .a.on .dot{background:var(--cy);box-shadow:0 0 10px var(--cy)}
+.drag{touch-action:none;cursor:grab;color:var(--tx3);width:36px;height:44px;display:flex;align-items:center;justify-content:center}
+.ritem{display:flex;align-items:center;gap:6px;background:var(--s1);border-radius:10px;padding:6px 8px 6px 0;margin-bottom:8px}
+.ritem.dragging{opacity:.5}
+.ritem input.in{min-height:44px;padding:0 6px;text-align:center;font-family:var(--f-num)}
+/* v1.1 */
+.set.beating{box-shadow:inset 0 0 0 1.5px var(--gr)}
+.shadow{display:flex;align-items:center;gap:8px;padding:0 8px 8px;font-size:var(--fs-s);color:var(--tx3)}
+.shadow .k{letter-spacing:.1em;text-transform:uppercase;font-size:10px;font-weight:700;color:var(--tx3)}
+.shadow.beat .k,.shadow.beat .mono{color:var(--gr)}
+.quest{border-left:3px solid var(--cy)}
+.quest.done{border-left-color:var(--gr)}
+.quest .title{font-weight:700;font-size:17px;margin:2px 0}
+.chipx{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--s2);color:var(--tx2)}
+.chipx.on{background:var(--cy-tint);color:var(--cy)}
+.chipx.used{background:var(--s2);color:var(--tx3)}
+.chart{width:100%;height:auto;display:block}
+.chart text{font-family:var(--f-num);font-size:5px;fill:var(--tx3)}
+.chart .base{stroke:var(--tx3);stroke-dasharray:2 2;stroke-width:.6}
+.chart .ln{stroke:var(--cy);stroke-width:1.4;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.chart .ar{fill:var(--cy);opacity:.09}
+.chart .grid{stroke:var(--line);stroke-width:.5}
+.lift.open .more{display:block}
+.lift .more{display:none;margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+.trow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;min-height:32px;align-items:center;font-size:var(--fs-s)}
+.trow.h{color:var(--tx3);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.trow>:last-child{text-align:right}.trow>:nth-child(2){text-align:center}
+.hist .lrow{cursor:pointer}
+.hist .detail{padding:4px 4px 12px;border-top:1px solid var(--line)}
+.hist .detail .exn{font-weight:600;font-size:var(--fs-s);margin:10px 0 4px}
+.hist .detail .srow{display:grid;grid-template-columns:32px 1fr 1fr auto;gap:8px;font-size:var(--fs-s);color:var(--tx2);min-height:26px;align-items:center}
+.hist .detail .srow .w{color:var(--cy);font-size:11px;font-weight:700}
+.mh{margin:18px 4px 6px}
+.rankup{position:fixed;inset:0;z-index:70;background:rgba(10,11,15,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0;pointer-events:none;transition:opacity 200ms}
+.rankup.on{opacity:1;pointer-events:auto}
+.rankup .letter{font-family:var(--f-num);font-size:140px;line-height:1;font-weight:700;color:var(--cy);text-shadow:0 0 40px rgba(62,230,255,.5)}
+.rankup.on .letter{animation:rise 500ms cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{transform:translateY(24px) scale(.85);opacity:0}to{transform:none;opacity:1}}
+.rankup .sub{color:var(--tx2);font-size:var(--fs-m);text-align:center;max-width:280px;padding:0 16px}
+.rankup .kicker{color:var(--gr)}
+.cardimg{width:100%;border-radius:var(--r);display:block;margin:8px 0 4px}
+.summary .v{font-size:var(--fs-xl);color:var(--cy);line-height:1}
+.summary .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.summary .grid .card{margin:0;background:var(--s2)}
+.summary .xp{color:var(--gr)}
+.empty{text-align:center;color:var(--tx3);padding:28px 0}
+.note{font-size:var(--fs-s);color:var(--tx3);line-height:1.45}
+</style>
+</head>
+<body>
+<div id="app"><div id="screen" class="screen"></div></div>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="workout"><svg class="i" viewBox="0 0 24 24"><path d="M6 7v10M18 7v10M3 9v6M21 9v6M6 12h12"/></svg>Workout</button>
+  <button data-tab="routines"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Routines</button>
+  <button data-tab="progress"><svg class="i" viewBox="0 0 24 24"><path d="M4 18L10 11l4 4 6-8"/><path d="M15 7h5v5"/></svg>Progress</button>
+  <button data-tab="profile"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
+</nav>
+
+<div class="rest" id="rest"><div class="bar" id="restbar"></div><div class="inner">
+  <span class="num time" id="resttime">0:00</span><span class="small muted grow" id="restlabel">Rest</span>
+  <button class="btn ghost" id="restplus">+15s</button><button class="btn ghost" id="restskip">Skip</button></div></div>
+
+<div class="sheet-bg" id="sheetbg"></div>
+<div class="sheet" id="sheet"></div>
+<div class="modal-bg" id="modalbg"><div class="modal" id="modal"></div></div>
+<div class="rankup" id="rankup"><span class="kicker">Rank up</span><div class="letter" id="rankup-letter">C</div><div class="sub" id="rankup-sub"></div><span class="small dim" style="margin-top:20px">Tap to continue</span></div>
+<div class="toast" id="toast"></div>
+
+<script src="core.js"></script>
+<script>
+(function(){
+'use strict';
+const C = window.ARISE_CORE, DAY = C.DAY;
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const KEY = 'arise.v1';
+const KG = 0.45359237;
+
+// ---------- state ----------
+const DEFAULT = () => ({
+  profile: { bodyweight: 180, units: 'lb', sex: 'm', age: 30, defaultRest: 120, weeklyTarget: 3, name: 'Hunter', keepAwake: true, notify: 'unasked' },
+  routines: [], sessions: [], active: null, custom: [], exRest: {},
+  game: { xp: 0, achievements: {}, prs: [], rank: 'E', quest: null },
+});
+let state = DEFAULT();
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && typeof o === 'object') state = Object.assign(DEFAULT(), o);
+      state.profile = Object.assign(DEFAULT().profile, state.profile || {});
+      state.game = Object.assign(DEFAULT().game, state.game || {});
+      ['routines', 'sessions', 'custom'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; });
+      if (!state.exRest || typeof state.exRest !== 'object') state.exRest = {};
+    }
+  } catch (e) { console.warn('load failed', e); state = DEFAULT(); }
+}
+let saveErr = false;
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); saveErr = false; }
+  catch (e) { console.warn('save failed', e); if (!saveErr) { saveErr = true; toast('Could not save. Storage may be full.', 'rd'); } }
+}
+
+// ---------- exercises ----------
+let EXS = [], exById = {};
+function buildEx() {
+  EXS = C.EX.concat(state.custom || []);
+  exById = {}; EXS.forEach(e => exById[e.id] = e);
+}
+const P = () => state.profile;
+const BW = () => +P().bodyweight || 0;
+
+// units helpers (stored lb)
+function fw(lb, dec) { // display weight
+  const v = P().units === 'kg' ? lb * KG : lb;
+  const d = dec == null ? (P().units === 'kg' ? 1 : 0) : dec;
+  const s = (+v).toFixed(d);
+  return s.replace(/\.0+$/, '');
+}
+function toLb(v) { v = +v || 0; return P().units === 'kg' ? v / KG : v; }
+function fromLb(lb) { return P().units === 'kg' ? +(lb * KG).toFixed(1) : +(+lb).toFixed(1).replace(/\.0$/, ''); }
+const U = () => P().units;
+function fmtSet(ex, s) {
+  if (!s) return '—';
+  if (ex && ex.bw) return (+s.w ? '+' + fw(s.w) : 'BW') + ' × ' + s.r;
+  return fw(s.w) + ' × ' + s.r;
+}
+function fmtTime(sec) { sec = Math.max(0, Math.round(sec)); const m = Math.floor(sec / 60), s = sec % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
+function fmtDur(ms) { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : Math.floor(m / 60) + 'h ' + (m % 60) + 'm'; }
+function pct(v, d) { return (v >= 0 ? '+' : '') + v.toFixed(d == null ? 1 : d) + '%'; }
+
+// ---------- analysis cache ----------
+let cache = null;
+function invalidate() { cache = null; }
+function analyses() {
+  if (cache) return cache;
+  const out = {};
+  for (const ex of EXS) { const a = C.analyze(ex.id, state.sessions, ex, BW(), Date.now()); if (a) out[ex.id] = a; }
+  cache = out; return out;
+}
+function usageCount() {
+  const u = {};
+  for (const s of state.sessions) for (const e of s.entries || []) u[e.exId] = (u[e.exId] || 0) + 1;
+  return u;
+}
+function prevEntry(exId) {
+  const ss = state.sessions.slice().sort((a, b) => b.date - a.date);
+  for (const s of ss) for (const e of s.entries || []) if (e.exId === exId && e.sets && e.sets.length) return e;
+  return null;
+}
+function allTimeBest(exId) { const a = analyses()[exId]; return a ? a.allTimeBest : 0; }
+function lastBest(exId) { const a = analyses()[exId]; return a ? a.history[a.history.length - 1].best : 0; }
+function tierInfo(ex, e1rm) {
+  if (!ex.std || !BW() || !e1rm) return null;
+  return C.percentile(e1rm / BW(), P().sex, P().age, ex.std);
+}
+// lifts with a formed baseline and a standards table, with their current tier
+function strengthLifts() {
+  const out = [], an = analyses();
+  for (const id in an) { const a = an[id], ex = exById[id]; if (!ex || !ex.std || !a.formed) continue; const t = tierInfo(ex, a.current); if (t) out.push({ exId: id, name: ex.name, current: a.current, tier: t.tier, std: ex.std }); }
+  return out;
+}
+function currentRank() { return C.rankFor(strengthLifts().map(l => l.tier)); }
+function tierMap() { const m = {}; for (const l of strengthLifts()) m[l.exId] = l.tier; return m; }
+function todayQuest() {
+  const st = C.streak(state.sessions, P().weeklyTarget);
+  const q = C.dailyQuest(analyses(), exById, st, Date.now());
+  const g = state.game.quest;
+  q.done = !!(g && g.key === q.key && g.done);
+  return q;
+}
+function overallChange() {
+  const f = Object.values(analyses()).filter(a => a.formed);
+  return f.length ? C.median(f.map(a => a.change)) : null;
+}
+function gameCtx() {
+  const an = analyses();
+  let maxTier = -1;
+  for (const id in an) { const t = tierInfo(exById[id], an[id].current); if (t && t.tier > maxTier) maxTier = t.tier; }
+  const ratio = id => an[id] ? an[id].current / (BW() || 1) : 0;
+  const maxReps = id => { let m = 0; for (const s of state.sessions) for (const e of s.entries || []) if (e.exId === id) for (const st of e.sets || []) if (!st.warmup && +st.r > m) m = +st.r; return m; };
+  let maxVolume = 0; for (const s of state.sessions) maxVolume = Math.max(maxVolume, C.sessionVolume(s, exById, BW()));
+  const ov = overallChange();
+  return { sessions: state.sessions, prCount: (state.game.prs || []).length, streak: C.streak(state.sessions, P().weeklyTarget), maxTier, ratio, maxReps, maxVolume, overall: ov == null ? 0 : ov };
+}
+function checkAchievements() {
+  const ctx = gameCtx(), fresh = [];
+  for (const a of C.ACHIEVEMENTS) {
+    if (state.game.achievements[a.id]) continue;
+    let ok = false; try { ok = a.check(ctx); } catch (e) {}
+    if (ok) { state.game.achievements[a.id] = Date.now(); fresh.push(a); }
+  }
+  return fresh;
+}
+
+// ---------- UI primitives ----------
+let toastT = null;
+function toast(msg, kind) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast on' + (kind === 'pr' ? ' pr' : '');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2400);
+}
+function modal(opts) {
+  return new Promise(res => {
+    const bg = $('#modalbg'), m = $('#modal');
+    m.innerHTML = (opts.title ? '<h2>' + esc(opts.title) + '</h2>' : '') + (opts.html || (opts.body ? '<p>' + esc(opts.body) + '</p>' : '')) +
+      '<div class="acts">' + (opts.buttons || [{ label: 'OK', primary: true, value: true }]).map((b, i) =>
+        '<button class="btn ' + (b.primary ? 'primary' : b.danger ? 'danger' : 'ghost') + '" data-i="' + i + '">' + esc(b.label) + '</button>').join('') + '</div>';
+    bg.classList.add('on');
+    const close = v => { bg.classList.remove('on'); res(v); };
+    $$('.acts button', m).forEach(b => b.onclick = () => { const o = (opts.buttons || [{ value: true }])[+b.dataset.i]; close(o.value !== undefined ? o.value : (o.onValue ? o.onValue(m) : true)); });
+    bg.onclick = e => { if (e.target === bg && opts.dismissable !== false) close(null); };
+    if (opts.onOpen) opts.onOpen(m);
+  });
+}
+const confirmDlg = (title, body, label, danger) => modal({ title, body, buttons: [{ label: 'Cancel', value: false }, { label: label || 'Confirm', value: true, primary: !danger, danger: !!danger }] });
+function icon(n) {
+  const d = {
+    check: '<path d="M5 12l5 5L20 7"/>', plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    more: '<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>',
+    drag: '<path d="M8 7h8M8 12h8M8 17h8"/>', back: '<path d="M15 5l-7 7 7 7"/>', trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+    timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M10 2h4"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  }[n];
+  return '<svg class="i" viewBox="0 0 24 24">' + d + '</svg>';
+}
+
+// ---------- navigation ----------
+let tab = 'workout', sub = null; // sub: {view:'routine-edit', id}
+function setTab(t) { tab = t; sub = null; render(); window.scrollTo(0, 0); }
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTab(b.dataset.tab); });
+
+function render() {
+  $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  const s = $('#screen');
+  if (tab === 'workout') s.innerHTML = state.active ? viewActive() : (sub && sub.view === 'history' ? viewHistory() : viewHome());
+  else if (tab === 'routines') s.innerHTML = sub && sub.view === 'routine-edit' ? viewRoutineEdit() : viewRoutines();
+  else if (tab === 'progress') s.innerHTML = viewProgress();
+  else s.innerHTML = viewProfile();
+  afterRender();
+}
+
+// ---------- HOME (no active workout) ----------
+function levelCard() {
+  const L = C.levelFromXp(state.game.xp), r = 30, circ = 2 * Math.PI * r;
+  const rn = C.rankNext(strengthLifts(), BW(), P().sex, P().age);
+  return '<div class="card"><div class="hero"><div class="ring"><svg viewBox="0 0 76 76"><circle class="bg" cx="38" cy="38" r="' + r + '"/><circle class="fg" cx="38" cy="38" r="' + r + '" stroke-dasharray="' + circ + '" stroke-dashoffset="' + (circ * (1 - L.frac)) + '"/></svg><div class="rank">' + rn.rank + '</div></div>' +
+    '<div class="grow"><div class="kicker">' + esc(P().name || 'Hunter') + ' · Rank ' + rn.rank + '</div><div class="row" style="align-items:baseline;gap:8px"><span class="num bigval">' + L.level + '</span><span class="muted">level</span><span class="small dim mono grow">' + Math.round(L.into) + '/' + Math.round(L.need) + ' XP</span></div>' +
+    '<div class="small muted" style="margin-top:2px">' + esc(unitText(rn.text)) + '</div></div></div></div>';
+}
+function questCard() {
+  const st = C.streak(state.sessions, P().weeklyTarget);
+  const frac = Math.min(1, st.thisWeek / st.target);
+  const usedMon = st.shieldsUsed.length ? new Date(st.shieldsUsed[0]).toLocaleDateString(undefined, { month: 'short' }) : '';
+  const shield = st.shieldReady ? '<span class="chipx on" title="One missed week per month is forgiven">Shield ready' + (usedMon ? ' · used ' + usedMon : '') + '</span>' : '<span class="chipx used">Shield used · ' + usedMon + '</span>';
+  const shieldNote = '<span class="small dim grow" style="margin-left:8px">One missed week a month is forgiven.</span>';
+  return '<div class="card"><div class="row" style="margin-bottom:8px"><div class="grow"><div class="kicker">This week</div><div style="font-weight:600;margin-top:2px">' +
+    (st.metThisWeek ? 'Goal met. Keep the streak alive.' : st.left + ' session' + (st.left === 1 ? '' : 's') + ' left this week') + '</div></div>' +
+    '<div style="text-align:right"><div class="num" style="font-size:24px;line-height:1" >' + st.thisWeek + '<span class="dim">/' + st.target + '</span></div><div class="small ' + (st.weeks ? 'gr' : 'dim') + '">' + st.weeks + ' wk streak</div></div></div>' +
+    '<div class="prog' + (st.metThisWeek ? ' green' : '') + '"><i style="width:' + (frac * 100) + '%"></i></div><div class="row" style="margin-top:10px">' + shield + shieldNote + '</div></div>';
+}
+function dailyQuestCard() {
+  const q = todayQuest();
+  return '<div class="card quest' + (q.done ? ' done' : '') + '"><div class="row"><div class="grow"><div class="kicker">Daily quest' + (q.done ? ' · complete' : '') + '</div><div class="title">' + esc(q.title) + '</div><div class="small muted">' + esc(unitText(q.text)) + '</div></div>' +
+    '<span class="num ' + (q.done ? 'gr' : 'cy') + '" style="font-size:var(--fs-l)">+' + q.xp + '</span></div></div>';
+}
+function prCountFor(sessionId) { return (state.game.prs || []).filter(p => p.sessionId === sessionId).length; }
+function recentCard() {
+  const recent = state.sessions.slice().sort((a, b) => b.date - a.date).slice(0, 3);
+  if (!recent.length) return '';
+  const rows = recent.map(s => { const n = s.entries.reduce((a, e) => a + e.sets.length, 0), prs = prCountFor(s.id);
+    return '<div class="lrow" data-hist="' + esc(s.id) + '"><div class="grow"><div class="t">' + esc(s.name) + '</div><div class="s">' + C.fmtDate(s.date) + ' · ' + n + ' sets' + (prs ? ' · <span class="gr">' + prs + ' PR</span>' : '') + '</div></div><span class="small dim mono">' + (s.endedAt ? fmtDur(s.endedAt - s.date) : '') + '</span></div>'; }).join('');
+  return '<div class="row" style="margin:16px 4px 6px"><span class="kicker grow">Recent</span><button class="small cy" id="see-history" style="font-weight:600">See all</button></div><div class="card hist" style="padding:4px 12px">' + rows + '</div>';
+}
+function viewHome() {
+  const routines = state.routines.map(r => {
+    const last = lastPerformed(r.id);
+    return '<div class="lrow" data-start-routine="' + esc(r.id) + '"><div class="grow"><div class="t">' + esc(r.name) + '</div><div class="s">' + r.items.length + ' exercises' + (last ? ' · last ' + C.fmtDate(last) : ' · never done') + '</div></div><span class="btn ghost sm">Start</span></div>';
+  }).join('');
+  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + levelCard() + dailyQuestCard() + questCard() +
+    '<button class="btn primary full" id="start-empty" style="margin:4px 0 16px">Start empty workout</button>' +
+    '<div class="kicker" style="margin:0 4px 6px">Routines</div><div class="card" style="padding:4px 12px">' + (routines || '<div class="empty small">No routines yet. Build one in the Routines tab.</div>') + '</div>' + recentCard();
+}
+// ---------- HISTORY ----------
+let openHist = null;
+function viewHistory() {
+  const list = state.sessions.slice().sort((a, b) => b.date - a.date);
+  let html = '<div class="top"><button class="icon-btn" id="h-back">' + icon('back') + '</button><h1 class="grow">History</h1><span class="kicker">' + list.length + ' workouts</span></div>';
+  if (!list.length) return html + '<div class="empty">Nothing logged yet.</div>';
+  let month = '';
+  for (const s of list) {
+    const m = new Date(s.date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    if (m !== month) { month = m; html += (html.endsWith('</div>') && month ? '' : '') + '<div class="kicker mh">' + esc(m) + '</div><div class="card hist" style="padding:4px 12px">'; }
+    const n = s.entries.reduce((a, e) => a + e.sets.length, 0), prs = prCountFor(s.id), open = openHist === s.id;
+    html += '<div class="lrow" data-hist="' + esc(s.id) + '"><div class="grow"><div class="t">' + esc(s.name) + '</div><div class="s">' + C.fmtDate(s.date) + ' · ' + s.entries.length + ' exercises · ' + n + ' sets' + (prs ? ' · <span class="gr">' + prs + ' PR</span>' : '') + '</div></div><span class="small dim mono">' + (s.endedAt ? fmtDur(s.endedAt - s.date) : '') + '</span></div>';
+    if (open) html += sessionDetail(s);
+    // close the card when the next session is in another month
+    const next = list[list.indexOf(s) + 1];
+    if (!next || new Date(next.date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) !== month) html += '</div>';
+  }
+  return html;
+}
+function sessionDetail(s) {
+  const prIds = new Set((state.game.prs || []).filter(p => p.sessionId === s.id).map(p => p.exId));
+  let html = '<div class="detail">';
+  for (const e of s.entries) {
+    const ex = exById[e.exId] || { name: '?' }; let wn = 0;
+    html += '<div class="exn">' + esc(ex.name) + (prIds.has(e.exId) ? ' <span class="badge pr">PR</span>' : '') + '</div>';
+    for (const st of e.sets) html += '<div class="srow"><span class="' + (st.warmup ? 'w' : 'dim') + '">' + (st.warmup ? 'W' : ++wn) + '</span><span class="mono">' + fmtSet(ex, st) + '</span><span class="mono dim">' + (st.warmup ? '' : fw(C.setE1RM(ex, st, BW())) + ' e1RM') + '</span><span></span></div>';
+  }
+  html += '<div class="row" style="margin-top:12px"><span class="small dim grow">Volume ' + fw(C.sessionVolume(s, exById, BW())) + ' ' + U() + '</span><button class="btn danger sm" data-delsess="' + esc(s.id) + '">Delete</button></div></div>';
+  return html;
+}
+async function deleteSession(id) {
+  const s = state.sessions.find(x => x.id === id); if (!s) return;
+  if (!(await confirmDlg('Delete workout?', esc(s.name) + ' from ' + C.fmtDate(s.date) + ' will be removed from your log and your progress will be recalculated.', 'Delete', true))) return;
+  state.sessions = state.sessions.filter(x => x.id !== id);
+  state.game.prs = (state.game.prs || []).filter(p => p.sessionId !== id);
+  invalidate(); save(); toast('Workout deleted'); openHist = null; render();
+}
+function lastPerformed(rid) { let m = 0; for (const s of state.sessions) if (s.routineId === rid && s.date > m) m = s.date; return m; }
+
+// ---------- ACTIVE WORKOUT ----------
+function startWorkout(routine) {
+  const a = { id: uid(), startedAt: Date.now(), name: routine ? routine.name : defaultName(), routineId: routine ? routine.id : null, entries: [], rest: null };
+  state.active = a;
+  if (routine) for (const it of routine.items) addExerciseToActive(it.exId, it.sets, it.reps, it.restSec);
+  save(); tab = 'workout'; sub = null; render(); requestWake();
+}
+function defaultName() { const h = new Date().getHours(); return (h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening') + ' workout'; }
+function addExerciseToActive(exId, nSets, reps, restSec) {
+  const ex = exById[exId]; if (!ex) return;
+  const prev = prevEntry(exId);
+  const n = nSets || (prev ? prev.sets.length : 3);
+  const sets = [];
+  for (let i = 0; i < n; i++) {
+    const p = prev && prev.sets[i];
+    sets.push({ w: p ? p.w : 0, r: p ? p.r : (reps || 0), warmup: !!(p && p.warmup), done: false });
+  }
+  state.active.entries.push({ exId, sets, rest: restSec || state.exRest[exId] || P().defaultRest });
+}
+function viewActive() {
+  const a = state.active;
+  const xp = liveXp();
+  let html = '<div class="top"><input class="name-in" id="wname" value="' + esc(a.name) + '" aria-label="Workout name"><span class="num timer" id="elapsed">' + fmtTime((Date.now() - a.startedAt) / 1000) + '</span><button class="btn primary sm" id="finish">Finish</button></div>';
+  html += '<div class="row small" style="margin:-6px 0 14px 2px"><span class="gr num" id="livexp">+' + xp + ' XP</span><span class="dim">this workout</span></div>';
+  a.entries.forEach((e, ei) => {
+    const ex = exById[e.exId] || { name: 'Unknown', id: e.exId };
+    const prev = prevEntry(e.exId);
+    html += '<div class="exblock" data-e="' + ei + '"><div class="exh"><h2>' + esc(ex.name) + '</h2><span class="small dim mono">' + fmtTime(e.rest) + '</span><button class="icon-btn" data-exmenu="' + ei + '">' + icon('more') + '</button></div>' + shadowLine(e, ex);
+    html += '<div class="thead"><span>Set</span><span>Previous</span><span>' + U() + '</span><span>Reps</span><span></span></div>';
+    let wn = 0;
+    e.sets.forEach((s, si) => {
+      const p = prev && prev.sets[si];
+      const label = s.warmup ? 'W' : ++wn;
+      html += '<div class="set-wrap"><div class="set-del" data-del="' + ei + ':' + si + '">Delete</div><div class="set' + (s.done ? ' done' : '') + '" data-s="' + si + '">' +
+        '<button class="n' + (s.warmup ? ' w' : '') + '" data-warm="' + ei + ':' + si + '">' + label + '</button>' +
+        '<button class="prev" data-prev="' + ei + ':' + si + '">' + (p ? fmtSet(ex, p) : '—') + '</button>' +
+        '<input class="in num" type="number" inputmode="decimal" step="any" data-w="' + ei + ':' + si + '" value="' + (s.w ? fromLb(s.w) : (ex.bw ? '0' : '')) + '" placeholder="' + (ex.bw ? '+' + U() : U()) + '">' +
+        '<input class="in num" type="number" inputmode="numeric" data-r="' + ei + ':' + si + '" value="' + (s.r || '') + '" placeholder="reps">' +
+        '<button class="ck" data-ck="' + ei + ':' + si + '" aria-label="Complete set">' + icon('check') + '</button></div></div>';
+    });
+    html += '<button class="addset" data-addset="' + ei + '">+ Add set</button>';
+    html += '<div class="exstats" id="exstats-' + ei + '">' + exStats(e, ex) + '</div></div>';
+  });
+  html += '<button class="btn ghost full" id="add-ex" style="margin-top:4px">' + icon('plus') + ' Add exercise</button>';
+  html += '<button class="btn line full" id="cancel-wo" style="margin-top:12px;color:var(--tx2)">Discard workout</button>';
+  return html;
+}
+function shadowTop(exId) { const a = analyses()[exId]; if (!a) return null; for (const h of a.history) if (Math.abs(h.best - a.allTimeBest) < 1e-6) return { top: h.top, best: a.allTimeBest }; return null; }
+function shadowLine(e, ex) {
+  const sh = shadowTop(e.exId); if (!sh) return '';
+  return '<div class="shadow" id="shadow-' + state.active.entries.indexOf(e) + '"><span class="k">Shadow</span><span class="mono">' + fmtSet(ex, sh.top) + '</span><span class="dim">·</span><span class="mono">' + fw(sh.best) + ' e1RM</span></div>';
+}
+function refreshBeating(ei) {
+  const e = state.active.entries[ei], ex = exById[e.exId], sh = shadowTop(e.exId); if (!sh) return;
+  let any = false;
+  e.sets.forEach((s, si) => {
+    const row = $('.exblock[data-e="' + ei + '"] .set[data-s="' + si + '"]'); if (!row) return;
+    const beat = !s.warmup && +s.r > 0 && C.setE1RM(ex, s, BW()) > sh.best + 1e-6;
+    row.classList.toggle('beating', beat && !s.done); if (beat && s.done) any = true;
+  });
+  const line = $('#shadow-' + ei); if (line) line.classList.toggle('beat', any);
+}
+function exStats(e, ex) {
+  const done = e.sets.filter(s => s.done && !s.warmup && +s.r > 0);
+  if (!done.length) return '<span class="dim">Complete a set to see e1RM</span>';
+  let best = 0, rough = false;
+  for (const s of done) { const v = C.setE1RM(ex, s, BW()); if (v > best) best = v; if (C.isRough(s.r)) rough = true; }
+  const a = analyses()[ex.id];
+  let out = '<span>e1RM <b class="num cy">' + fw(best) + '</b></span>';
+  if (a && a.formed) { const ch = (best / a.baseline - 1) * 100; out += '<span class="' + (ch >= 0 ? 'gr' : 'rd') + ' num">' + pct(ch) + ' vs baseline</span>'; }
+  else if (a) out += '<span class="dim">baseline forming</span>';
+  if (best > allTimeBest(ex.id) + 1e-6 && a) out += '<span class="badge pr">PR</span>';
+  else if (a && best > lastBest(ex.id) + 1e-6) out += '<span class="badge cy">Beat last</span>';
+  if (rough) out += '<span class="dim">est. rough (&gt;12 reps)</span>';
+  return out;
+}
+function liveXp() {
+  const a = state.active; if (!a) return 0;
+  let xp = 0;
+  for (const e of a.entries) {
+    const ex = exById[e.exId]; if (!ex) continue;
+    let best = 0, n = 0;
+    for (const s of e.sets) if (s.done && !s.warmup && +s.r > 0) { n++; best = Math.max(best, C.setE1RM(ex, s, BW())); }
+    xp += n * C.XP.set;
+    if (n && analyses()[ex.id]) { if (best > lastBest(ex.id) + 1e-6) xp += C.XP.beatLast; if (best > allTimeBest(ex.id) + 1e-6) xp += C.XP.pr; }
+  }
+  return xp + (xp ? C.XP.workout : 0);
+}
+const prToasted = {};
+function refreshExStats(ei) {
+  const e = state.active.entries[ei], ex = exById[e.exId]; const el = $('#exstats-' + ei); if (el) el.innerHTML = exStats(e, ex);
+  const xpEl = $('#livexp'); if (xpEl) xpEl.textContent = '+' + liveXp() + ' XP';
+  refreshBeating(ei);
+}
+function readSetInputs(ei, si) {
+  const s = state.active.entries[ei].sets[si];
+  const wEl = $('[data-w="' + ei + ':' + si + '"]'), rEl = $('[data-r="' + ei + ':' + si + '"]');
+  if (wEl) s.w = toLb(wEl.value); if (rEl) s.r = Math.max(0, Math.floor(+rEl.value || 0));
+}
+function completeSet(ei, si) {
+  const e = state.active.entries[ei], ex = exById[e.exId], s = e.sets[si];
+  readSetInputs(ei, si);
+  if (s.done) { s.done = false; save(); rerenderSet(ei, si); refreshExStats(ei); return; }
+  if (!(s.r > 0) || (!ex.bw && !(s.w > 0))) { toast('Enter weight and reps first'); return; }
+  s.done = true;
+  let pr = false;
+  if (!s.warmup && analyses()[ex.id] && C.setE1RM(ex, s, BW()) > allTimeBest(ex.id) + 1e-6) {
+    pr = true;
+    if (!prToasted[ex.id]) { prToasted[ex.id] = 1; toast('NEW PR — ' + ex.name + ' ' + fw(C.setE1RM(ex, s, BW())) + ' ' + U() + ' e1RM', 'pr'); if (navigator.vibrate) navigator.vibrate([30, 40, 60]); }
+  }
+  startRest(e.rest);
+  save(); rerenderSet(ei, si, pr); refreshExStats(ei);
+  // prefill next set from this one if empty
+  const nx = e.sets[si + 1];
+  if (nx && !nx.done && !nx.w && !nx.r) { nx.w = s.w; nx.r = s.r; rerenderSet(ei, si + 1); save(); }
+}
+function rerenderSet(ei, si, pr) {
+  const row = $('.exblock[data-e="' + ei + '"] .set[data-s="' + si + '"]'); if (!row) return;
+  const s = state.active.entries[ei].sets[si];
+  row.classList.toggle('done', !!s.done); if (pr) { row.classList.remove('pr'); void row.offsetWidth; row.classList.add('pr'); }
+  const wEl = $('[data-w]', row), rEl = $('[data-r]', row);
+  if (wEl && document.activeElement !== wEl) wEl.value = s.w ? fromLb(s.w) : (exById[state.active.entries[ei].exId].bw ? '0' : '');
+  if (rEl && document.activeElement !== rEl) rEl.value = s.r || '';
+}
+async function finishWorkout() {
+  const a = state.active;
+  a.entries.forEach((e, ei) => e.sets.forEach((s, si) => { if (!s.done) readSetInputs(ei, si); }));
+  const entries = a.entries.map(e => ({ exId: e.exId, sets: e.sets.filter(s => s.done && +s.r > 0).map(s => ({ w: +s.w || 0, r: +s.r, warmup: !!s.warmup })) })).filter(e => e.sets.length);
+  const nSets = entries.reduce((n, e) => n + e.sets.length, 0);
+  if (!nSets) { if (await confirmDlg('Nothing logged', 'No completed sets. Discard this workout?', 'Discard', true)) { state.active = null; save(); render(); } return; }
+  if (!(await confirmDlg('Finish workout?', nSets + ' sets across ' + entries.length + ' exercises will be saved.', 'Finish'))) return;
+  let xp = liveXp();
+  // PRs vs history before this session
+  const prs = [];
+  for (const e of entries) { const ex = exById[e.exId]; let best = 0; for (const s of e.sets) if (!s.warmup) best = Math.max(best, C.setE1RM(ex, s, BW())); if (analyses()[ex.id] && best > allTimeBest(ex.id) + 1e-6) prs.push({ exId: ex.id, e1rm: best, prev: allTimeBest(ex.id), date: Date.now(), sessionId: a.id }); }
+  const session = { id: a.id, date: a.startedAt, endedAt: Date.now(), name: a.name, routineId: a.routineId, entries };
+  const before = C.levelFromXp(state.game.xp);
+  // quest, rank and tiers before the session lands
+  const quest = todayQuest();
+  const questHit = !quest.done && C.questDone(quest, session, exById[quest.exId], BW(), quest.exId ? allTimeBest(quest.exId) : 0);
+  if (questHit) { xp += quest.xp; state.game.quest = { key: quest.key, done: true, date: Date.now() }; }
+  const rankBefore = currentRank(), tiersBefore = tierMap();
+  state.sessions.push(session);
+  state.game.xp += xp; state.game.prs = (state.game.prs || []).concat(prs);
+  for (const e of a.entries) if (e.rest) state.exRest[e.exId] = e.rest;
+  state.active = null; stopRest(); releaseWake(); invalidate();
+  const fresh = checkAchievements();
+  const rankAfter = currentRank(), tiersAfter = tierMap();
+  const tierUps = Object.keys(tiersAfter).filter(id => tiersBefore[id] == null ? false : tiersAfter[id] > tiersBefore[id]).map(id => ({ name: exById[id].name, tier: C.TIERS[tiersAfter[id]] }));
+  state.game.rank = rankAfter;
+  save();
+  const after = C.levelFromXp(state.game.xp), st = C.streak(state.sessions, P().weeklyTarget);
+  const vol = C.sessionVolume(session, exById, BW());
+  await modal({ dismissable: false, html:
+    '<div class="summary"><div class="kicker">Workout complete</div><h2 style="margin:4px 0 2px">' + esc(session.name) + '</h2>' +
+    '<div class="row" style="align-items:baseline;gap:8px;margin-top:8px"><span class="num v xp">+' + xp + '</span><span class="muted">XP</span>' + (after.level > before.level ? '<span class="badge pr">Level up → ' + after.level + '</span>' : '') + '</div>' +
+    (questHit ? '<div class="row" style="margin-top:8px"><span class="badge pr">Quest complete</span><span class="small muted">' + esc(quest.title) + ' · +' + quest.xp + ' XP</span></div>' : '') +
+    '<div class="grid"><div class="card"><div class="kicker">Duration</div><div class="num" style="font-size:22px">' + fmtDur(session.endedAt - session.date) + '</div></div>' +
+    '<div class="card"><div class="kicker">Sets</div><div class="num" style="font-size:22px">' + nSets + '</div></div>' +
+    '<div class="card"><div class="kicker">Volume</div><div class="num" style="font-size:22px">' + fw(vol) + ' <span class="small muted">' + U() + '</span></div></div>' +
+    '<div class="card"><div class="kicker">Streak</div><div class="num" style="font-size:22px">' + st.weeks + ' <span class="small muted">wk</span></div></div></div>' +
+    (prs.length ? '<div class="kicker" style="margin-bottom:6px">Personal records</div>' + prs.map(p => '<div class="row" style="min-height:34px"><span class="grow">' + esc(exById[p.exId].name) + '</span><span class="num gr">' + fw(p.e1rm) + ' <span class="small muted">' + U() + ' e1RM</span></span></div>').join('') : '<p class="small dim">No PRs this time. Showing up counts.</p>') +
+    (fresh.length ? '<div class="kicker" style="margin:12px 0 6px">Unlocked</div>' + fresh.map(f => '<div class="row" style="min-height:30px"><span class="badge cy">' + esc(f.name) + '</span><span class="small muted">' + esc(f.desc) + '</span></div>').join('') : '') +
+    '</div>', buttons: [{ label: 'Arise', primary: true, value: true }] });
+  for (const k in prToasted) delete prToasted[k];
+  render();
+  if (C.RANK_ORDER.indexOf(rankAfter) > C.RANK_ORDER.indexOf(rankBefore)) showRankUp(rankAfter, 'Hunter rank ' + rankBefore + ' → ' + rankAfter + '. ' + C.RANK_RULES[rankAfter] + '.');
+  else if (tierUps.length) showRankUp(tierUps[0].tier[0], tierUps[0].name + ' is now ' + tierUps[0].tier + (tierUps.length > 1 ? ', and ' + (tierUps.length - 1) + ' more lift' + (tierUps.length > 2 ? 's' : '') + ' moved up.' : '.'), 'Tier up');
+}
+function showRankUp(letter, text, kicker) {
+  const el = $('#rankup'); $('#rankup-letter').textContent = letter; $('#rankup-sub').textContent = text; $('.kicker', el).textContent = kicker || 'Rank up';
+  el.classList.add('on'); if (navigator.vibrate) navigator.vibrate([40, 60, 40, 60, 120]);
+  const close = () => { el.classList.remove('on'); el.onclick = null; };
+  el.onclick = close; setTimeout(() => { if (el.classList.contains('on')) el.onclick = close; }, 1400);
+}
+// ---------- screen wake lock ----------
+let wake = null;
+async function requestWake() {
+  if (!P().keepAwake || !state.active || !('wakeLock' in navigator)) return;
+  try { if (wake && !wake.released) return; wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } catch (e) { wake = null; }
+}
+function releaseWake() { try { if (wake) wake.release(); } catch (e) {} wake = null; }
+// ---------- rest-end notifications ----------
+async function ensureNotify() {
+  if (!('Notification' in window) || P().notify !== 'unasked') return;
+  const ok = await modal({ title: 'Buzz when rest is over?', body: 'Arise can send a notification when your rest timer ends, even if the screen is off. You can change this later in Profile.', buttons: [{ label: 'Not now', value: false }, { label: 'Allow', primary: true, value: true }] });
+  if (!ok) { P().notify = 'denied'; save(); return; }
+  try { const r = await Notification.requestPermission(); P().notify = r === 'granted' ? 'granted' : 'denied'; } catch (e) { P().notify = 'denied'; }
+  save();
+}
+function swPost(msg) { try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage(msg); } catch (e) {} }
+
+// rest timer (persisted in state.active.rest)
+let restTick = null;
+function startRest(sec) {
+  if (!state.active) return;
+  if (sec <= 0) return;
+  state.active.rest = { endsAt: Date.now() + sec * 1000, total: sec };
+  save(); updateRest();
+  ensureNotify().then(() => { if (P().notify === 'granted' && state.active && state.active.rest) swPost({ type: 'rest', endsAt: state.active.rest.endsAt }); });
+}
+function stopRest() { if (state.active) state.active.rest = null; $('#rest').classList.remove('on'); swPost({ type: 'cancel' }); }
+function updateRest() {
+  const el = $('#rest'), r = state.active && state.active.rest;
+  if (!r) { el.classList.remove('on'); return; }
+  const left = (r.endsAt - Date.now()) / 1000;
+  if (left <= 0) { state.active.rest = null; save(); el.classList.remove('on'); if (navigator.vibrate) navigator.vibrate([80, 60, 80]); toast('Rest over. Go.'); return; }
+  el.classList.add('on');
+  $('#resttime').textContent = fmtTime(left);
+  $('#restbar').style.width = (100 * left / r.total) + '%';
+}
+$('#restplus').onclick = () => { const r = state.active && state.active.rest; if (r) { r.endsAt += 15000; r.total += 15; save(); updateRest(); if (P().notify === 'granted') swPost({ type: 'rest', endsAt: r.endsAt }); } };
+$('#restskip').onclick = () => { stopRest(); save(); };
+setInterval(() => {
+  if (state.active) { const e = $('#elapsed'); if (e) e.textContent = fmtTime((Date.now() - state.active.startedAt) / 1000); updateRest(); }
+}, 1000);
+
+// swipe to delete
+function bindSwipe(root) {
+  let startX = 0, startY = 0, cur = null, dx = 0, horiz = null;
+  root.addEventListener('touchstart', e => {
+    const row = e.target.closest('.set'); if (!row) return;
+    $$('.set').forEach(r => { if (r !== row) r.style.transform = ''; });
+    cur = row; startX = e.touches[0].clientX; startY = e.touches[0].clientY; dx = 0; horiz = null;
+  }, { passive: true });
+  root.addEventListener('touchmove', e => {
+    if (!cur) return;
+    const x = e.touches[0].clientX - startX, y = e.touches[0].clientY - startY;
+    if (horiz === null && (Math.abs(x) > 8 || Math.abs(y) > 8)) horiz = Math.abs(x) > Math.abs(y);
+    if (!horiz) return;
+    dx = Math.min(0, Math.max(-96, x)); cur.style.transition = 'none'; cur.style.transform = 'translateX(' + dx + 'px)';
+  }, { passive: true });
+  root.addEventListener('touchend', () => {
+    if (!cur) return; cur.style.transition = '';
+    cur.style.transform = dx < -50 ? 'translateX(-80px)' : ''; cur = null;
+  });
+}
+
+// ---------- EXERCISE PICKER (sheet) ----------
+let picker = null; // {selected:Set, q:'', group:'all', onAdd}
+function openPicker(onAdd, single) {
+  picker = { selected: new Set(), q: '', group: 'all', onAdd, single: !!single };
+  renderPicker();
+  $('#sheetbg').classList.add('on'); $('#sheet').classList.add('on');
+  setTimeout(() => { const i = $('#psearch'); if (i) i.focus(); }, 220);
+}
+function closeSheet() { picker = null; $('#sheetbg').classList.remove('on'); $('#sheet').classList.remove('on'); }
+$('#sheetbg').onclick = closeSheet;
+function renderPicker() {
+  const p = picker, use = usageCount(), an = analyses();
+  const q = p.q.trim().toLowerCase();
+  const list = EXS.filter(e => (p.group === 'all' || e.group === p.group) && (!q || e.name.toLowerCase().includes(q) || (e.muscle || '').toLowerCase().includes(q) || (e.equip || '').toLowerCase().includes(q)))
+    .sort((a, b) => (use[b.id] || 0) - (use[a.id] || 0) || a.name.localeCompare(b.name));
+  const chips = ['all'].concat(C.GROUPS).map(g => '<button class="chip' + (p.group === g ? ' on' : '') + '" data-g="' + g + '">' + (g === 'all' ? 'All' : g[0].toUpperCase() + g.slice(1)) + '</button>').join('');
+  const rows = list.map(e => {
+    const a = an[e.id], on = p.selected.has(e.id);
+    return '<div class="lrow" data-pick="' + esc(e.id) + '"><div class="chk' + (on ? ' on' : '') + '">' + (on ? icon('check') : '') + '</div><div class="grow"><div class="t">' + esc(e.name) + '</div><div class="s">' + esc(e.equip) + ' · ' + esc(e.muscle) + (use[e.id] ? ' · ' + use[e.id] + '×' : '') + '</div></div>' +
+      (a ? '<div style="text-align:right"><div class="num cy">' + fw(a.current) + '</div><div class="s">e1RM</div></div>' : '<span class="s">—</span>') + '</div>';
+  }).join('');
+  $('#sheet').innerHTML = '<div class="sh"><div class="row"><div class="grow" style="position:relative"><input class="in" id="psearch" placeholder="Search exercises" value="' + esc(p.q) + '" autocomplete="off"></div><button class="icon-btn" id="pclose">' + icon('x') + '</button></div><div class="chips">' + chips + '</div></div>' +
+    '<div class="body">' + (rows || '<div class="empty">Nothing matches.</div>') + '<button class="btn line full" id="pcustom" style="margin:12px 0 20px">' + icon('plus') + ' Create custom exercise</button></div>' +
+    '<div class="foot"><button class="btn primary full" id="padd"' + (p.selected.size ? '' : ' disabled') + '>' + (p.single ? 'Select' : 'Add ' + (p.selected.size || '') + (p.selected.size === 1 ? ' exercise' : ' exercises')) + '</button></div>';
+  $('#pclose').onclick = closeSheet;
+  $('#psearch').oninput = e => { p.q = e.target.value; renderPickerList(); };
+  $('#sheet').onclick = e => {
+    const chip = e.target.closest('.chip'); if (chip) { p.group = chip.dataset.g; renderPicker(); $('#psearch').focus(); return; }
+    const row = e.target.closest('[data-pick]'); if (row) {
+      const id = row.dataset.pick;
+      if (p.single) { p.selected = new Set([id]); } else if (p.selected.has(id)) p.selected.delete(id); else p.selected.add(id);
+      renderPickerList(); return;
+    }
+    if (e.target.closest('#padd')) { const ids = Array.from(p.selected); const fn = p.onAdd; closeSheet(); fn(ids); return; }
+    if (e.target.closest('#pcustom')) { customExerciseDialog(id => { if (id) { p.selected.add(id); renderPickerList(); } }); }
+  };
+}
+function renderPickerList() { // keep search focus: rebuild only rows + footer
+  const scroll = $('#sheet .body').scrollTop;
+  const q = $('#psearch'); const sel = q ? q.selectionStart : 0;
+  renderPicker();
+  const q2 = $('#psearch'); q2.focus(); try { q2.setSelectionRange(sel, sel); } catch (e) {}
+  $('#sheet .body').scrollTop = scroll;
+}
+async function customExerciseDialog(cb) {
+  const cats = ['push', 'pull', 'squat', 'hinge', 'arms', 'core'];
+  const v = await modal({ title: 'Custom exercise', html:
+    '<label class="field"><span>Name</span><input class="in" id="cx-name" placeholder="e.g. Landmine Press"></label>' +
+    '<label class="field"><span>Muscle group</span><select class="in" id="cx-group">' + C.GROUPS.map(g => '<option value="' + g + '">' + g[0].toUpperCase() + g.slice(1) + '</option>').join('') + '</select></label>' +
+    '<label class="field"><span>Movement category</span><select class="in" id="cx-cat">' + cats.map(g => '<option value="' + g + '">' + C.CAT_NAMES[g] + '</option>').join('') + '</select></label>' +
+    '<label class="field"><span>Equipment</span><select class="in" id="cx-equip"><option>Barbell</option><option>Dumbbell</option><option>Machine</option><option>Cable</option><option>Bodyweight</option><option>Other</option></select></label>' +
+    '<label class="field"><span>Bodyweight factor (0 = none)</span><input class="in" id="cx-bw" type="number" inputmode="decimal" step="0.05" value="0"></label>',
+    buttons: [{ label: 'Cancel', value: null }, { label: 'Create', primary: true, onValue: m => ({ name: $('#cx-name', m).value.trim(), group: $('#cx-group', m).value, cat: $('#cx-cat', m).value, equip: $('#cx-equip', m).value, bw: +$('#cx-bw', m).value || 0 }) }] });
+  if (!v || !v.name) { cb(null); return; }
+  const ex = { id: 'cx_' + uid(), name: v.name, cat: v.cat, equip: v.equip, muscle: v.group[0].toUpperCase() + v.group.slice(1), group: v.group, custom: true };
+  if (v.bw > 0) ex.bw = Math.min(1.5, v.bw);
+  state.custom.push(ex); buildEx(); invalidate(); save(); cb(ex.id);
+}
+
+// ---------- ROUTINES ----------
+function routineChange(r) {
+  const an = analyses(); const f = r.items.map(i => an[i.exId]).filter(a => a && a.formed);
+  return f.length ? C.median(f.map(a => a.change)) : null;
+}
+function viewRoutines() {
+  const cards = state.routines.map(r => {
+    const ch = routineChange(r), last = lastPerformed(r.id);
+    return '<div class="card"><div class="row" style="margin-bottom:6px"><h2 class="grow" style="font-size:17px">' + esc(r.name) + '</h2>' + (ch == null ? '<span class="small dim">forming</span>' : '<span class="num ' + (ch >= 0 ? 'gr' : 'rd') + '">' + pct(ch) + '</span>') + '</div>' +
+      '<div class="small muted" style="margin-bottom:10px">' + r.items.map(i => esc((exById[i.exId] || {}).name || '?') + ' <span class="mono">' + i.sets + '×' + i.reps + '</span>').join(' · ') + '</div>' +
+      '<div class="row"><span class="small dim grow">' + (last ? 'Last ' + C.fmtDate(last) : 'Never performed') + '</span><button class="btn ghost sm" data-edit-routine="' + esc(r.id) + '">Edit</button><button class="btn primary sm" data-start-routine="' + esc(r.id) + '">Start</button></div></div>';
+  }).join('');
+  return '<div class="top"><h1>Routines</h1><button class="btn primary sm" id="new-routine">' + icon('plus') + ' New</button></div>' + (cards || '<div class="empty">No routines yet.<br><span class="small">Build one and start it in one tap.</span></div>');
+}
+let draft = null;
+function viewRoutineEdit() {
+  const r = draft;
+  const items = r.items.map((it, i) => {
+    const ex = exById[it.exId] || { name: '?' };
+    return '<div class="ritem" data-i="' + i + '"><div class="drag" data-drag="' + i + '">' + icon('drag') + '</div><div class="grow"><div style="font-weight:600;font-size:var(--fs-s);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(ex.name) + '</div>' +
+      '<div class="row" style="gap:6px;margin-top:4px"><input class="in" type="number" inputmode="numeric" data-rs="' + i + '" value="' + it.sets + '" aria-label="sets"><span class="dim">×</span><input class="in" type="number" inputmode="numeric" data-rr="' + i + '" value="' + it.reps + '" aria-label="reps"><input class="in" type="number" inputmode="numeric" data-rt="' + i + '" value="' + it.restSec + '" aria-label="rest seconds" title="rest (s)"><span class="small dim">s</span></div></div>' +
+      '<button class="icon-btn" data-rdel="' + i + '">' + icon('x') + '</button></div>';
+  }).join('');
+  return '<div class="top"><button class="icon-btn" id="r-back">' + icon('back') + '</button><h1 class="grow">' + (r.isNew ? 'New routine' : 'Edit routine') + '</h1><button class="btn primary sm" id="r-save">Save</button></div>' +
+    '<label class="field"><span>Name</span><input class="in" id="r-name" value="' + esc(r.name) + '" placeholder="Upper A"></label>' +
+    '<div class="kicker" style="margin:6px 4px 8px">Exercises · sets × reps · rest</div><div id="ritems">' + (items || '<div class="empty small">No exercises yet.</div>') + '</div>' +
+    '<button class="btn ghost full" id="r-add">' + icon('plus') + ' Add exercise</button>' +
+    (r.isNew ? '' : '<button class="btn danger full" id="r-delete" style="margin-top:24px">Delete routine</button>');
+}
+function readDraft() {
+  draft.name = $('#r-name').value.trim() || draft.name;
+  draft.items.forEach((it, i) => {
+    const s = $('[data-rs="' + i + '"]'), r = $('[data-rr="' + i + '"]'), t = $('[data-rt="' + i + '"]');
+    if (s) it.sets = Math.max(1, Math.floor(+s.value || 1)); if (r) it.reps = Math.max(0, Math.floor(+r.value || 0)); if (t) it.restSec = Math.max(0, Math.floor(+t.value || 0));
+  });
+}
+function bindDrag() {
+  const box = $('#ritems'); if (!box) return;
+  let from = -1, el = null;
+  box.addEventListener('pointerdown', e => {
+    const h = e.target.closest('[data-drag]'); if (!h) return;
+    from = +h.dataset.drag; el = h.closest('.ritem'); el.classList.add('dragging'); h.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  box.addEventListener('pointermove', e => {
+    if (!el) return;
+    const rows = $$('.ritem', box); const y = e.clientY;
+    for (const r of rows) {
+      if (r === el) continue;
+      const b = r.getBoundingClientRect();
+      if (y < b.top + b.height / 2 && el.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_PRECEDING) { box.insertBefore(el, r); break; }
+      if (y > b.top + b.height / 2 && el.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING) { box.insertBefore(el, r.nextSibling); break; }
+    }
+  });
+  const end = () => {
+    if (!el) return; el.classList.remove('dragging');
+    readDraft();
+    const order = $$('.ritem', box).map(r => +r.dataset.i);
+    draft.items = order.map(i => draft.items[i]);
+    el = null; from = -1; render();
+  };
+  box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+}
+
+// ---------- PROGRESS ----------
+// dated e1RM chart: y labels, first/last dates, dashed baseline, area fill, endpoint dot
+function liftChart(a) {
+  const h = a.history, W = 100, H = 56, L = 16, R = 4, T = 6, B = 12;
+  if (h.length < 2) return '<div class="small dim" style="margin-top:10px">Chart appears after a second session.</div>';
+  const xs = h.map(x => x.date), ys = h.map(x => x.best).concat(a.formed ? [a.baseline] : []);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs); let y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (y1 - y0 < y1 * 0.05) { y0 = y0 * 0.97; y1 = y1 * 1.03; }
+  const px = x => L + (W - L - R) * (x - x0) / (x1 - x0), py = y => T + (H - T - B) * (1 - (y - y0) / (y1 - y0));
+  const pts = h.map(p => px(p.date).toFixed(1) + ',' + py(p.best).toFixed(1));
+  const last = h[h.length - 1];
+  const area = 'M' + pts[0] + ' L' + pts.join(' L') + ' L' + px(last.date).toFixed(1) + ',' + (H - B) + ' L' + px(h[0].date).toFixed(1) + ',' + (H - B) + ' Z';
+  const dl = ts => new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '">' +
+    '<line class="grid" x1="' + L + '" y1="' + T + '" x2="' + (W - R) + '" y2="' + T + '"/><line class="grid" x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B) + '"/>' +
+    '<text x="' + (L - 2) + '" y="' + (T + 2) + '" text-anchor="end">' + fw(y1) + '</text><text x="' + (L - 2) + '" y="' + (H - B + 1) + '" text-anchor="end">' + fw(y0) + '</text>' +
+    (a.formed ? '<line class="base" x1="' + L + '" y1="' + py(a.baseline).toFixed(1) + '" x2="' + (W - R) + '" y2="' + py(a.baseline).toFixed(1) + '"/>' : '') +
+    '<path class="ar" d="' + area + '"/><polyline class="ln" points="' + pts.join(' ') + '"/>' +
+    '<circle cx="' + px(last.date).toFixed(1) + '" cy="' + py(last.best).toFixed(1) + '" r="1.8" fill="var(--cy)"/>' +
+    '<text x="' + L + '" y="' + (H - 2) + '">' + dl(h[0].date) + '</text><text x="' + (W - R) + '" y="' + (H - 2) + '" text-anchor="end">' + dl(last.date) + '</text></svg>';
+}
+let expandedLift = null;
+function liftTable(a, ex) {
+  const rows = a.history.slice(-8).reverse().map(h => '<div class="trow"><span class="dim">' + C.fmtDate(h.date) + '</span><span class="mono">' + fmtSet(ex, h.top) + '</span><span class="mono cy">' + fw(h.best) + '</span></div>').join('');
+  return '<div class="more"><div class="trow h"><span>Session</span><span>Top set</span><span>e1RM</span></div>' + rows + '<div class="small dim" style="margin-top:8px">All-time best ' + fw(a.allTimeBest) + ' ' + U() + ' on ' + C.fmtDate(a.bestDate) + '</div></div>';
+}
+function tierBar(ex, a) {
+  if (!ex.std) return '<div class="small dim" style="margin-top:10px">No published standard for this lift. Progress only.</div>';
+  if (!BW()) return '<div class="small dim" style="margin-top:10px">Set your bodyweight in Profile to see strength tier.</div>';
+  const cur = tierInfo(ex, a.current), base = a.formed ? tierInfo(ex, a.baseline) : null;
+  const segs = [0, 1, 2, 3, 4].map(i => {
+    const fillOf = t => t ? Math.max(0, Math.min(1, (t.pos * 5) - i)) : 0;
+    return '<i>' + (base ? '<b style="width:' + (fillOf(base) * 100) + '%"></b>' : '') + '<u style="width:' + (fillOf(cur) * 100) + '%"></u></i>';
+  }).join('');
+  const labs = C.TIER_SHORT.map((t, i) => '<span class="' + (i === cur.tier ? 'on' : '') + '">' + t + '</span>').join('');
+  return '<div class="tier"><div class="segs">' + segs + '</div><div class="labs">' + labs + '</div>' +
+    '<div class="small muted" style="margin-top:8px"><span class="mono">' + (a.current / BW()).toFixed(2) + '×</span> bodyweight · ' + cur.tierName + ' · ~' + C.ordinal(cur.pct) + ' percentile</div></div>';
+}
+function bodyMap() {
+  // sets per muscle group in the last 7 days
+  const cut = Date.now() - 7 * DAY, g = {};
+  for (const s of state.sessions) if (s.date >= cut) for (const e of s.entries || []) { const ex = exById[e.exId]; if (!ex) continue; g[ex.group] = (g[ex.group] || 0) + e.sets.filter(x => !x.warmup).length; }
+  const op = k => g[k] ? (0.35 + Math.min(0.65, g[k] / 15)).toFixed(2) : 0;
+  const part = (k, shape) => shape.replace('<S', '<S').replace(/class="m"/g, 'class="' + (g[k] ? 'g' : 'm') + '"' + (g[k] ? ' opacity="' + op(k) + '"' : ''));
+  const front = '<svg viewBox="0 0 100 200">' +
+    '<circle cx="50" cy="16" r="11" class="m"/>' +
+    part('shoulders', '<ellipse cx="30" cy="42" rx="9" ry="7" class="m"/><ellipse cx="70" cy="42" rx="9" ry="7" class="m"/>') +
+    part('chest', '<path d="M34 38h14v16q-4 5-14 4z" class="m"/><path d="M66 38h-14v16q4 5 14 4z" class="m"/>') +
+    part('core', '<rect x="39" y="60" width="22" height="34" rx="5" class="m"/>') +
+    part('arms', '<rect x="18" y="49" width="10" height="30" rx="5" class="m"/><rect x="72" y="49" width="10" height="30" rx="5" class="m"/><rect x="15" y="81" width="9" height="28" rx="4.5" class="m"/><rect x="76" y="81" width="9" height="28" rx="4.5" class="m"/>') +
+    part('legs', '<rect x="32" y="96" width="16" height="50" rx="7" class="m"/><rect x="52" y="96" width="16" height="50" rx="7" class="m"/><rect x="34" y="150" width="12" height="38" rx="6" class="m"/><rect x="54" y="150" width="12" height="38" rx="6" class="m"/>') + '</svg>';
+  const back = '<svg viewBox="0 0 100 200">' +
+    '<circle cx="50" cy="16" r="11" class="m"/>' +
+    part('shoulders', '<ellipse cx="30" cy="42" rx="9" ry="7" class="m"/><ellipse cx="70" cy="42" rx="9" ry="7" class="m"/>') +
+    part('back', '<path d="M38 36h24l3 8-4 26H39l-4-26z" class="m"/><rect x="41" y="72" width="18" height="20" rx="4" class="m"/>') +
+    part('arms', '<rect x="18" y="49" width="10" height="30" rx="5" class="m"/><rect x="72" y="49" width="10" height="30" rx="5" class="m"/><rect x="15" y="81" width="9" height="28" rx="4.5" class="m"/><rect x="76" y="81" width="9" height="28" rx="4.5" class="m"/>') +
+    part('glutes', '<ellipse cx="41" cy="102" rx="9" ry="9" class="m"/><ellipse cx="59" cy="102" rx="9" ry="9" class="m"/>') +
+    part('legs', '<rect x="32" y="112" width="16" height="36" rx="7" class="m"/><rect x="52" y="112" width="16" height="36" rx="7" class="m"/><rect x="34" y="150" width="12" height="38" rx="6" class="m"/><rect x="54" y="150" width="12" height="38" rx="6" class="m"/>') + '</svg>';
+  return '<div class="bodymap">' + front + back + '</div>';
+}
+function viewProgress() {
+  const an = analyses(), list = Object.values(an).sort((a, b) => b.current - a.current);
+  const text = C.readout(list, exById, Date.now());
+  const cut = Date.now() - 7 * DAY, st = C.streak(state.sessions, P().weeklyTarget);
+  const prsWeek = (state.game.prs || []).filter(p => p.date >= cut).length;
+  let html = '<div class="top"><h1>Progress</h1><span class="kicker">e1RM based</span></div>';
+  html += '<div class="card" style="padding:18px 18px"><div class="kicker" style="margin-bottom:8px">Readout</div><p class="readout">' + esc(text) + '</p></div>';
+  html += '<div class="stat3"><div class="card"><div class="kicker">PRs · 7d</div><div class="num v ' + (prsWeek ? 'gr' : '') + '">' + prsWeek + '</div></div><div class="card"><div class="kicker">This week</div><div class="num v">' + st.thisWeek + '<span class="dim">/' + st.target + '</span></div></div><div class="card"><div class="kicker">Streak</div><div class="num v">' + st.weeks + '<span class="small muted"> wk</span></div></div></div>';
+  html += '<div class="card" style="margin-top:12px"><div class="kicker">Trained · last 7 days</div>' + bodyMap() + '</div>';
+  if (!list.length) html += '<div class="empty">Per-lift cards appear after your first workout.</div>';
+  for (const a of list) {
+    const ex = exById[a.exId]; if (!ex) continue;
+    html += '<div class="card lift' + (expandedLift === a.exId ? ' open' : '') + '" data-lift="' + esc(a.exId) + '"><div class="row" style="align-items:flex-start"><div class="grow"><h2 style="font-size:17px">' + esc(ex.name) + '</h2><div class="small dim">' + a.sessions + ' sessions · last ' + C.fmtDate(a.lastDate) + ' · tap for detail</div></div>' +
+      (a.stall ? '<span class="badge stall">Stalled</span>' : '') + '</div>' +
+      '<div class="row" style="align-items:baseline;gap:10px;margin:10px 0 4px"><span class="num bigval cy">' + fw(a.current) + '</span><span class="muted small">' + U() + ' e1RM' + (a.rough ? ' · rough' : '') + '</span><span class="grow"></span>' +
+      (a.formed ? '<span class="num ' + (a.change >= 0 ? 'gr' : 'rd') + '" style="font-size:var(--fs-l)">' + pct(a.change) + '</span>' : '<span class="badge dimb">Baseline forming</span>') + '</div>' +
+      (a.formed ? '<div class="small dim">vs baseline ' + fw(a.baseline) + ' ' + U() + ' (first 14 days)</div>' : '<div class="small dim">' + a.sessions + '/3 sessions · ' + Math.min(14, Math.floor(a.spanDays)) + '/14 days</div>') +
+      '<div style="margin-top:10px">' + liftChart(a) + '</div>' + tierBar(ex, a) +
+      (a.stall ? '<div class="callout"><b>' + esc(a.stall.title) + '</b><p>' + esc(unitText(a.stall.text)) + '</p></div>' : '') + liftTable(a, ex) + '</div>';
+  }
+  html += '<p class="note" style="margin:6px 4px 20px">Tiers and percentiles are estimates from published strength standards, adjusted for bodyweight, sex and age. They are not a live leaderboard.</p>';
+  return html;
+}
+// prescription text is generated in lb; convert numbers for kg users
+function unitText(t) {
+  if (U() !== 'kg') return t;
+  return t.replace(/(\d+(?:\.\d+)?) lb/g, (m, n) => (Math.round(n * KG / 2.5) * 2.5).toString().replace(/\.0$/, '') + ' kg').replace(/(\d+) × (\d+)/g, (m, w, r) => (Math.round(w * KG / 2.5) * 2.5) + ' × ' + r);
+}
+
+// ---------- PROFILE ----------
+let persistState = null, installEvt = null;
+function viewProfile() {
+  const p = P(), L = C.levelFromXp(state.game.xp);
+  const ach = C.ACHIEVEMENTS.map(a => '<div class="a' + (state.game.achievements[a.id] ? ' on' : '') + '"><span class="dot"></span><span class="n">' + esc(a.name) + '</span><span class="d">' + esc(a.desc) + '</span></div>').join('');
+  return '<div class="top"><h1>Profile</h1><span class="kicker">Rank ' + currentRank() + ' · Lv ' + L.level + '</span></div>' +
+    '<div class="card"><label class="field"><span>Hunter name</span><input class="in" id="p-name" maxlength="24" value="' + esc(p.name || '') + '" placeholder="Hunter"></label>' +
+    '<div class="row" style="gap:12px"><label class="field grow"><span>Bodyweight (' + U() + ')</span><input class="in num" id="p-bw" type="number" inputmode="decimal" step="any" value="' + fromLb(p.bodyweight) + '"></label><label class="field grow"><span>Age</span><input class="in num" id="p-age" type="number" inputmode="numeric" value="' + esc(p.age) + '"></label></div>' +
+    '<div class="row" style="gap:12px"><div class="field grow"><label>Units</label><div class="seg" id="p-units"><button data-v="lb" class="' + (p.units === 'lb' ? 'on' : '') + '">lb</button><button data-v="kg" class="' + (p.units === 'kg' ? 'on' : '') + '">kg</button></div></div><div class="field grow"><label>Sex (for standards)</label><div class="seg" id="p-sex"><button data-v="m" class="' + (p.sex === 'm' ? 'on' : '') + '">Male</button><button data-v="f" class="' + (p.sex === 'f' ? 'on' : '') + '">Female</button></div></div></div>' +
+    '<div class="row" style="gap:12px"><label class="field grow"><span>Default rest (s)</span><input class="in num" id="p-rest" type="number" inputmode="numeric" value="' + esc(p.defaultRest) + '"></label><label class="field grow"><span>Sessions / week goal</span><input class="in num" id="p-week" type="number" inputmode="numeric" value="' + esc(p.weeklyTarget) + '"></label></div>' +
+    '<div class="field"><label>Keep screen on during workouts</label><div class="seg" id="p-awake"><button data-v="1" class="' + (p.keepAwake ? 'on' : '') + '">On</button><button data-v="0" class="' + (!p.keepAwake ? 'on' : '') + '">Off</button></div></div>' +
+    '<div class="row"><span class="small grow ' + (p.notify === 'granted' ? 'muted' : 'dim') + '">Rest-over notifications: ' + (p.notify === 'granted' ? 'on' : p.notify === 'denied' ? 'off' : 'you will be asked on your first rest') + '. Best effort when the screen is off.</span>' + (p.notify !== 'granted' && 'Notification' in window ? '<button class="btn ghost sm" id="p-notify">Enable</button>' : '') + '</div></div>' +
+    '<div class="card"><div class="row"><div class="grow"><div class="kicker">Rank card</div><div class="small muted" style="margin-top:2px">Your rank, level, streak and top lifts as an image to share.</div></div><button class="btn primary sm" id="p-card">Make card</button></div></div>' +
+    '<div class="card"><div class="kicker" style="margin-bottom:10px">Achievements · ' + Object.keys(state.game.achievements).length + '/' + C.ACHIEVEMENTS.length + '</div><div class="ach">' + ach + '</div></div>' +
+    '<div class="card"><div class="kicker" style="margin-bottom:10px">Data</div>' +
+    '<div class="row" style="margin-bottom:10px"><span class="small grow ' + (persistState === true ? 'muted' : persistState === false ? 'rd' : 'dim') + '">' + (persistState === true ? 'Storage is persistent. Chrome will not evict your log.' : persistState === false ? 'Persistent storage NOT granted. Install the app and export a backup regularly.' : 'Checking storage persistence…') + '</span></div>' +
+    (installEvt ? '<button class="btn primary full" id="p-install" style="margin-bottom:10px">Install app</button>' : '') +
+    '<div class="row"><button class="btn ghost grow" id="p-export">Export JSON</button><button class="btn ghost grow" id="p-import">Import JSON</button><input type="file" id="p-file" accept="application/json,.json" hidden></div>' +
+    '<div class="small dim" style="margin-top:10px">' + state.sessions.length + ' workouts · ' + state.routines.length + ' routines · ' + state.custom.length + ' custom exercises' + (saveErr ? ' · <span class="rd">last save failed</span>' : '') + '</div></div>' +
+    '<button class="btn danger full" id="p-erase">Erase all data</button>' +
+    '<p class="note" style="margin:16px 4px 20px">Strength tiers and percentiles are estimates from published strength standards, not from other users of this app. e1RM uses Epley with reps capped at 12. Baseline is your best in the first 14 days on a lift; current is your best in the last 28. Everything stays on this device.</p>';
+}
+function bindProfile() {
+  const num = (id, key, min, max, conv) => { const el = $(id); if (!el) return; el.onchange = () => { let v = +el.value; if (isNaN(v)) return; v = Math.max(min, Math.min(max, v)); P()[key] = conv ? conv(v) : v; invalidate(); save(); render(); }; };
+  num('#p-bw', 'bodyweight', 0, 1000, toLb); num('#p-age', 'age', 0, 120); num('#p-rest', 'defaultRest', 0, 900); num('#p-week', 'weeklyTarget', 1, 14);
+  $$('#p-units button').forEach(b => b.onclick = () => { P().units = b.dataset.v; save(); render(); });
+  $('#p-name').onchange = e => { P().name = e.target.value.trim().slice(0, 24) || 'Hunter'; save(); };
+  $$('#p-awake button').forEach(b => b.onclick = () => { P().keepAwake = b.dataset.v === '1'; save(); render(); if (!P().keepAwake) releaseWake(); });
+  const nb = $('#p-notify'); if (nb) nb.onclick = async () => { P().notify = 'unasked'; await ensureNotify(); render(); };
+  $('#p-card').onclick = rankCard;
+  $$('#p-sex button').forEach(b => b.onclick = () => { P().sex = b.dataset.v; invalidate(); save(); render(); });
+  const ib = $('#p-install'); if (ib) ib.onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; render(); };
+  $('#p-export').onclick = () => {
+    const blob = new Blob([JSON.stringify({ app: 'arise', version: 1, exportedAt: new Date().toISOString(), data: state }, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arise-backup-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  };
+  $('#p-import').onclick = () => $('#p-file').click();
+  $('#p-file').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    let o; try { o = JSON.parse(await f.text()); } catch (err) { toast('Not valid JSON', 'rd'); return; }
+    const d = o && o.data && typeof o.data === 'object' ? o.data : o;
+    const valid = d && typeof d === 'object' && Array.isArray(d.sessions) && d.profile && typeof d.profile === 'object' &&
+      d.sessions.every(s => s && typeof s.date === 'number' && Array.isArray(s.entries) && s.entries.every(en => typeof en.exId === 'string' && Array.isArray(en.sets)));
+    if (!valid) { toast('File does not look like an Arise backup', 'rd'); e.target.value = ''; return; }
+    if (await confirmDlg('Replace all data?', 'This will overwrite your current ' + state.sessions.length + ' workouts with the ' + d.sessions.length + ' in the file. Export first if unsure.', 'Replace', true)) {
+      state = Object.assign(DEFAULT(), d); state.profile = Object.assign(DEFAULT().profile, d.profile); state.game = Object.assign(DEFAULT().game, d.game || {});
+      ['routines', 'custom'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; }); if (!state.exRest || typeof state.exRest !== 'object') state.exRest = {};
+      buildEx(); invalidate(); save(); toast('Imported ' + state.sessions.length + ' workouts'); render();
+    }
+    e.target.value = '';
+  };
+  $('#p-erase').onclick = async () => {
+    if (!(await confirmDlg('Erase everything?', 'All workouts, routines and progress on this device will be deleted. This cannot be undone.', 'Erase', true))) return;
+    if (!(await confirmDlg('Last chance', 'Really erase ' + state.sessions.length + ' workouts?', 'Yes, erase', true))) return;
+    state = DEFAULT(); buildEx(); invalidate(); save(); toast('Erased'); render();
+  };
+}
+
+// ---------- rank card (canvas) ----------
+async function rankCard() {
+  const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+  const L = C.levelFromXp(state.game.xp), rank = currentRank(), st = C.streak(state.sessions, P().weeklyTarget);
+  const lifts = strengthLifts().sort((a, b) => b.current - a.current).slice(0, 3);
+  const mono = '"Geist Mono", ui-monospace, Menlo, Consolas, monospace', ui = '"Geist", system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  try { await Promise.all([document.fonts.load('700 200px ' + mono), document.fonts.load('600 40px ' + ui)]); } catch (e) {}
+  g.fillStyle = '#0A0B0F'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,.08)'; g.lineWidth = 2; g.strokeRect(40, 40, W - 80, H - 80);
+  g.fillStyle = '#5F6776'; g.font = '600 30px ' + ui; g.textBaseline = 'top';
+  const k = (t, x, y) => { g.fillStyle = '#5F6776'; g.font = '600 28px ' + ui; g.fillText(t.toUpperCase().split('').join(String.fromCharCode(8202)), x, y); };
+  k('Arise · Hunter card', 100, 100);
+  g.fillStyle = '#F2F4F8'; g.font = '700 64px ' + ui; g.fillText(P().name || 'Hunter', 100, 150);
+  g.fillStyle = '#3EE6FF'; g.font = '700 420px ' + mono; g.textAlign = 'right'; g.shadowColor = 'rgba(62,230,255,.45)'; g.shadowBlur = 60; g.fillText(rank, W - 90, 200); g.shadowBlur = 0; g.textAlign = 'left';
+  k('Rank', 100, 300); g.fillStyle = '#F2F4F8'; g.font = '600 44px ' + ui; g.fillText(C.RANK_RULES[rank], 100, 340);
+  const tile = (x, y, label, val, unit) => { g.fillStyle = '#14161C'; g.beginPath(); g.roundRect(x, y, 280, 150, 20); g.fill(); k(label, x + 28, y + 26); g.fillStyle = '#F2F4F8'; g.font = '700 64px ' + mono; g.fillText(String(val), x + 28, y + 62); const vw = g.measureText(String(val)).width; if (unit) { g.fillStyle = '#9AA3B2'; g.font = '500 28px ' + ui; g.fillText(unit, x + 28 + vw + 14, y + 94); } };
+  tile(100, 560, 'Level', L.level); tile(400, 560, 'Streak', st.weeks, 'wk'); tile(700, 560, 'Workouts', state.sessions.length);
+  k('Top lifts · e1RM', 100, 780);
+  if (!lifts.length) { g.fillStyle = '#9AA3B2'; g.font = '500 36px ' + ui; g.fillText('No formed baselines yet. Three sessions over 14 days unlock a lift.', 100, 830); }
+  lifts.forEach((l, i) => { const y = 830 + i * 110; g.fillStyle = '#F2F4F8'; g.font = '600 44px ' + ui; g.fillText(l.name, 100, y); g.fillStyle = '#9AA3B2'; g.font = '500 30px ' + ui; g.fillText(C.TIERS[l.tier], 100, y + 52); g.textAlign = 'right'; g.fillStyle = '#3EE6FF'; g.font = '700 56px ' + mono; g.fillText(fw(l.current) + ' ' + U(), W - 100, y); g.textAlign = 'left'; if (i < lifts.length - 1) { g.strokeStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.moveTo(100, y + 96); g.lineTo(W - 100, y + 96); g.stroke(); } });
+  g.fillStyle = '#5F6776'; g.font = '500 28px ' + ui; g.fillText(new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) + ' · estimates from published standards', 100, H - 120);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  const file = new File([blob], 'arise-rank-card.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Arise rank card' }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  const url = URL.createObjectURL(blob);
+  await modal({ title: 'Your rank card', html: '<img class="cardimg" src="' + url + '" alt="Rank card"><p class="small dim">Long-press the image to save or share it.</p>', buttons: [{ label: 'Done', primary: true, value: true }] });
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+// ---------- event wiring after render ----------
+function afterRender() {
+  const s = $('#screen');
+  if (tab === 'workout' && !state.active && sub && sub.view === 'history') {
+    $('#h-back').onclick = () => { sub = null; openHist = null; render(); };
+    $$('[data-hist]').forEach(el => el.onclick = () => { openHist = openHist === el.dataset.hist ? null : el.dataset.hist; render(); });
+    $$('[data-delsess]').forEach(b => b.onclick = e => { e.stopPropagation(); deleteSession(b.dataset.delsess); });
+  } else if (tab === 'workout' && !state.active) {
+    $('#start-empty').onclick = () => startWorkout(null);
+    $$('[data-start-routine]').forEach(el => el.onclick = () => startWorkout(state.routines.find(r => r.id === el.dataset.startRoutine)));
+    const sh = $('#see-history'); if (sh) sh.onclick = () => { sub = { view: 'history' }; render(); };
+    $$('[data-hist]').forEach(el => el.onclick = () => { openHist = el.dataset.hist; sub = { view: 'history' }; render(); });
+  }
+  if (tab === 'workout' && state.active) { requestWake(); state.active.entries.forEach((e, i) => refreshBeating(i)); }
+  if (tab === 'progress') {
+    $$('[data-lift]').forEach(el => el.onclick = e => { if (e.target.closest('.callout')) return; expandedLift = expandedLift === el.dataset.lift ? null : el.dataset.lift; $$('[data-lift]').forEach(x => x.classList.toggle('open', x.dataset.lift === expandedLift)); });
+  }
+  if (tab === 'workout' && state.active) {
+    $('#wname').oninput = e => { state.active.name = e.target.value; save(); };
+    $('#finish').onclick = finishWorkout;
+    $('#add-ex').onclick = () => openPicker(ids => { ids.forEach(id => addExerciseToActive(id)); save(); render(); });
+    $('#cancel-wo').onclick = async () => { if (await confirmDlg('Discard workout?', 'Completed sets in this workout will be lost.', 'Discard', true)) { state.active = null; stopRest(); save(); render(); } };
+  }
+  if (tab === 'routines' && !(sub && sub.view === 'routine-edit')) {
+    $('#new-routine').onclick = () => { draft = { id: uid(), name: '', items: [], isNew: true }; sub = { view: 'routine-edit' }; render(); };
+    $$('[data-edit-routine]').forEach(b => b.onclick = () => { const r = state.routines.find(x => x.id === b.dataset.editRoutine); draft = JSON.parse(JSON.stringify(r)); sub = { view: 'routine-edit' }; render(); });
+    $$('[data-start-routine]').forEach(b => b.onclick = async () => {
+      if (state.active && !(await confirmDlg('Workout in progress', 'Starting a routine will discard the current workout.', 'Discard and start', true))) return;
+      startWorkout(state.routines.find(r => r.id === b.dataset.startRoutine));
+    });
+  }
+  if (tab === 'routines' && sub && sub.view === 'routine-edit') {
+    $('#r-back').onclick = () => { sub = null; draft = null; render(); };
+    $('#r-save').onclick = () => {
+      readDraft(); if (!draft.name) { toast('Give the routine a name'); $('#r-name').focus(); return; }
+      if (!draft.items.length) { toast('Add at least one exercise'); return; }
+      const clean = { id: draft.id, name: draft.name, items: draft.items.map(i => ({ exId: i.exId, sets: i.sets, reps: i.reps, restSec: i.restSec })) };
+      const idx = state.routines.findIndex(r => r.id === draft.id); if (idx >= 0) state.routines[idx] = clean; else state.routines.push(clean);
+      save(); sub = null; draft = null; toast('Routine saved'); render();
+    };
+    $('#r-add').onclick = () => { readDraft(); openPicker(ids => { ids.forEach(id => draft.items.push({ exId: id, sets: 3, reps: 8, restSec: state.exRest[id] || P().defaultRest })); render(); }); };
+    $$('[data-rdel]').forEach(b => b.onclick = () => { readDraft(); draft.items.splice(+b.dataset.rdel, 1); render(); });
+    const del = $('#r-delete'); if (del) del.onclick = async () => { if (await confirmDlg('Delete routine?', draft.name + ' will be removed. Past workouts are kept.', 'Delete', true)) { state.routines = state.routines.filter(r => r.id !== draft.id); save(); sub = null; draft = null; render(); } };
+    bindDrag();
+  }
+  if (tab === 'profile') bindProfile();
+}
+
+// Delegated listeners for the active workout, bound ONCE (the #screen element persists across renders).
+function bindWorkoutDelegates() {
+  const s = $('#screen');
+  bindSwipe(s);
+  s.addEventListener('input', e => {
+    if (tab !== 'workout' || !state.active) return;
+    const t = e.target; const key = t.dataset.w || t.dataset.r; if (!key) return;
+    const [ei, si] = key.split(':').map(Number); readSetInputs(ei, si); save(); refreshExStats(ei);
+  });
+  s.addEventListener('click', async e => {
+      if (tab !== 'workout' || !state.active) return;
+      const ck = e.target.closest('[data-ck]'); if (ck) { const [ei, si] = ck.dataset.ck.split(':').map(Number); completeSet(ei, si); return; }
+      const pv = e.target.closest('[data-prev]'); if (pv) {
+        const [ei, si] = pv.dataset.prev.split(':').map(Number); const en = state.active.entries[ei]; const p = prevEntry(en.exId); const ps = p && p.sets[si]; if (!ps) return;
+        en.sets[si].w = ps.w; en.sets[si].r = ps.r; save(); rerenderSet(ei, si); return;
+      }
+      const wm = e.target.closest('[data-warm]'); if (wm) { const [ei, si] = wm.dataset.warm.split(':').map(Number); const st = state.active.entries[ei].sets[si]; st.warmup = !st.warmup; save(); render(); return; }
+      const del = e.target.closest('[data-del]'); if (del) {
+        const [ei, si] = del.dataset.del.split(':').map(Number);
+        if (await confirmDlg('Delete set?', 'Set ' + (si + 1) + ' will be removed.', 'Delete', true)) { state.active.entries[ei].sets.splice(si, 1); save(); render(); } else render();
+        return;
+      }
+      const ad = e.target.closest('[data-addset]'); if (ad) {
+        const en = state.active.entries[+ad.dataset.addset]; const last = en.sets[en.sets.length - 1];
+        en.sets.push({ w: last ? last.w : 0, r: last ? last.r : 0, warmup: false, done: false }); save(); render(); return;
+      }
+      const mn = e.target.closest('[data-exmenu]'); if (mn) {
+        const ei = +mn.dataset.exmenu, en = state.active.entries[ei], ex = exById[en.exId];
+        const v = await modal({ title: ex.name, html: '<label class="field"><span>Rest between sets (seconds) — saved as this exercise\'s default</span><input class="in num" id="m-rest" type="number" inputmode="numeric" value="' + en.rest + '"></label>',
+          buttons: [{ label: 'Remove exercise', danger: true, value: 'remove' }, { label: 'Save', primary: true, onValue: m => ({ rest: Math.max(0, Math.floor(+$('#m-rest', m).value || 0)) }) }] });
+        if (v === 'remove') { if (await confirmDlg('Remove ' + ex.name + '?', 'Its sets in this workout will be lost.', 'Remove', true)) { state.active.entries.splice(ei, 1); save(); render(); } }
+        else if (v && v.rest != null) { en.rest = v.rest; state.exRest[en.exId] = v.rest; save(); render(); }
+      }
+  });
+}
+
+// ---------- boot ----------
+function seedDemo() {
+  const now = Date.now(), mk = (d, ex, rid) => ({ id: uid(), date: now - d * DAY + 36e5 * 10, name: 'Demo', routineId: rid || null, entries: Object.keys(ex).map(k => ({ exId: k, sets: ex[k].map(([w, r]) => ({ w, r, warmup: false })) })) });
+  const S = [];
+  for (let i = 0; i < 8; i++) {
+    const d = 56 - i * 7;
+    if (i === 5) continue; // a missed week, so the streak shield shows
+    S.push(mk(d, { bb_bench: [[135 + i * 4, 6], [135 + i * 4, 6], [135 + i * 4, 5]], bb_ohp: [[85 + i * 2, 6], [85 + i * 2, 6], [85 + i * 2, 5]], bw_pullup: [[0, 6 + Math.floor(i / 2)], [0, 6], [0, 5]] }, 'demoA'));
+    S.push(mk(d - 1, { bb_squat: [[205, 8], [205, 8], [205, 8]], bb_rdl: [[185 + i * 3, 8], [185 + i * 3, 8], [185 + i * 3, 8]] }, 'demoB'));
+    S.push(mk(d - 2, { bb_deadlift: [[255 + i * 5, 5], [255 + i * 5, 5]], bb_row: [[135 + i * 2, 8], [135 + i * 2, 8], [135 + i * 2, 8]] }));
+  }
+  state.sessions = S.filter(s => s.date <= now);
+  state.routines = [
+    { id: 'demoA', name: 'Upper A', items: [{ exId: 'bb_bench', sets: 3, reps: 6, restSec: 150 }, { exId: 'bb_ohp', sets: 3, reps: 6, restSec: 120 }, { exId: 'bw_pullup', sets: 3, reps: 8, restSec: 120 }] },
+    { id: 'demoB', name: 'Lower A', items: [{ exId: 'bb_squat', sets: 3, reps: 8, restSec: 180 }, { exId: 'bb_rdl', sets: 3, reps: 8, restSec: 150 }] },
+  ];
+  state.game.xp = 2600; state.profile.name = 'Sung';
+  invalidate(); checkAchievements(); state.game.rank = currentRank(); save();
+}
+load(); buildEx(); bindWorkoutDelegates();
+if (location.search.includes('demo') && !state.sessions.length && !state.active) {
+  seedDemo();
+  if (location.search.includes('active')) { const r = state.routines[0]; state.active = { id: uid(), startedAt: Date.now() - 14 * 60000, name: r.name, routineId: r.id, entries: [], rest: null }; r.items.forEach(it => addExerciseToActive(it.exId, it.sets, it.reps, it.restSec)); state.active.entries[0].sets[0].done = true; state.active.entries[0].sets[1].done = true; save(); }
+}
+const hashTab = location.hash.replace('#', '');
+if (['workout', 'routines', 'progress', 'profile'].includes(hashTab)) tab = hashTab;
+if (state.active && !hashTab) tab = 'workout';
+render(); updateRest();
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(g => { persistState = !!g; if (tab === 'profile') render(); }).catch(() => { persistState = false; });
+else persistState = false;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (tab === 'profile') render(); });
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { load(); buildEx(); invalidate(); updateRest(); if (!picker) render(); requestWake(); } });
+window.ARISE_DEBUG = { showRankUp, rankCard };
+window.addEventListener('pagehide', save);
+window.ARISE = { get state() { return state; }, render, seedDemo };
+})();
+</script>
+</body>
+</html>
