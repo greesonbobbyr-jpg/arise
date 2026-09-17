@@ -8,6 +8,7 @@ Personal strength-training PWA. Logs workouts Hevy-style, then tells you in plai
 |---|---|
 | `index.html` | The whole app: UI, styles, logic |
 | `core.js` | Exercise library, strength standards, all analysis math (pure functions) |
+| `anatomy.js` | Front and back muscle figure (traced paths from MuscleMap, MIT, see THIRD_PARTY.md) |
 | `sw.js` | Service worker: precaches the shell so the app opens offline |
 | `manifest.json` | PWA manifest (installable, standalone, dark) |
 | `icons/` | 192, 512 and 512-maskable icons |
