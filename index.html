@@ -196,11 +196,25 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat3 .card{margin:0;padding:12px}
 .stat3 .v{font-size:24px}
-.bodymap{display:flex;justify-content:center;gap:24px;padding:6px 0 2px}
-.bodymap svg{height:150px;width:auto}
-.bodymap .m{fill:var(--s3)}
-.bodymap .g{fill:var(--cy)}
-.bodymap .sil{fill:none;stroke:var(--line2);stroke-width:1.2}
+.bodymap{display:flex;justify-content:center;gap:10px;padding:8px 0 2px}
+.bodymap svg{height:320px;width:auto;max-width:48%;overflow:visible}
+.bodymap .sil{fill:#0E1117;stroke:rgba(62,230,255,.18);stroke-width:.8}
+.bodymap .mu{fill:#18222C;stroke:rgba(62,230,255,.42);stroke-width:.55;stroke-linejoin:round;cursor:pointer;transition:fill var(--t)}
+.bodymap .mu.lit{fill:var(--gr);stroke:rgba(182,255,59,.9)}
+.bodymap .fib{pointer-events:none;stroke:rgba(62,230,255,.22);stroke-width:.45;fill:none}
+.bodymap .lit ~ .fib{stroke:rgba(10,20,10,.35)}
+.bodymap .glow{pointer-events:none;fill:var(--gr);filter:url(#bmglow);opacity:.7}
+.bodymap .nerve{fill:none;stroke:var(--cy);stroke-width:.6;opacity:.22;stroke-linecap:round}
+.bodymap .nerve.live{opacity:.75;stroke-dasharray:3 5;animation:nflow 1.6s linear infinite}
+.bodymap .node{fill:var(--cy);opacity:.35}
+.bodymap .node.live{opacity:1;fill:var(--gr)}
+.bodymap .lab{font-family:var(--f-ui);font-size:7px;fill:var(--tx3);letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+@keyframes nflow{to{stroke-dashoffset:-16}}
+@keyframes bmpulse{0%,100%{opacity:.35}50%{opacity:.8}}
+.bodymap .glow.pulse{animation:bmpulse 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.bodymap .nerve.live,.bodymap .glow.pulse{animation:none}}
+.bm-legend{display:flex;gap:14px;justify-content:center;margin-top:6px;font-size:11px;color:var(--tx3)}
+.bm-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
 .ach{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .ach .a{background:var(--s2);border-radius:10px;padding:10px 8px;text-align:center;min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
 .ach .a .n{font-weight:700;font-size:var(--fs-s)}
@@ -287,7 +301,7 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
@@ -941,27 +955,77 @@ function tierBar(ex, a) {
   return '<div class="tier"><div class="segs">' + segs + '</div><div class="labs">' + labs + '</div>' +
     '<div class="small muted" style="margin-top:8px"><span class="mono">' + (a.current / BW()).toFixed(2) + '×</span> bodyweight · ' + cur.tierName + ' · ~' + C.ordinal(cur.pct) + ' percentile</div></div>';
 }
+// ---------- anatomical body map ----------
+// Each muscle is a path drawn for the figure's left side (viewer's left) and mirrored across x=100.
+// fib: fiber direction pattern. key: which training bucket lights it.
+const BM = {
+  front: [
+    { key: 'traps',    name: 'Traps',      d: 'M92,50 C84,52 72,58 62,66 C74,66 86,63 96,62 Z', fib: 'd' },
+    { key: 'delts',    name: 'Front delts',d: 'M58,64 C50,66 45,76 46,88 C48,96 56,98 62,94 C70,88 72,76 70,68 C67,64 62,63 58,64 Z', fib: 'v', lines: 'M58,68 C54,78 54,88 57,94' },
+    { key: 'chest',    name: 'Chest',      d: 'M97,62 C84,62 72,68 70,78 C69,90 78,100 92,103 C96,104 99,103 99,100 L99,64 Z', fib: 'h', lines: 'M97,72 C86,74 78,82 74,92 M97,84 C90,86 84,92 82,100' },
+    { key: 'biceps',   name: 'Biceps',     d: 'M47,92 C42,104 40,120 44,134 C50,140 58,136 60,124 C61,110 58,98 54,92 Z', fib: 'v', lines: 'M53,96 C49,110 48,124 50,134' },
+    { key: 'forearms', name: 'Forearms',   d: 'M43,138 C36,150 30,168 30,186 C33,190 39,188 41,180 C45,166 50,152 53,140 C50,136 46,135 43,138 Z', fib: 'v' },
+    { key: 'abs',      name: 'Abs',        d: 'M88,106 L99,106 L99,124 L88,124 Z M88,127 L99,127 L99,146 L88,146 Z M88,149 L99,149 L99,172 L88,172 Z M88,175 C88,188 93,197 99,202 L99,175 Z', fib: 'h' },
+    { key: 'obliques', name: 'Obliques',   d: 'M72,106 C70,124 71,144 77,160 C80,166 85,168 86,162 L86,108 C82,104 76,104 72,106 Z', fib: 'd' },
+    { key: 'quads',    name: 'Quads',      d: 'M74,194 C64,214 60,244 62,274 C64,292 72,302 82,302 C90,302 96,294 96,272 L96,200 C90,192 82,190 74,194 Z', fib: 'v', lines: 'M78,200 C72,236 72,270 78,298 M90,200 C92,236 92,270 88,298' },
+    { key: 'adductors',name: 'Adductors',  d: 'M97,200 C100,206 100,236 98,256 C94,250 91,224 92,204 Z', fib: 'v' },
+    { key: 'calves',   name: 'Tibialis',   d: 'M71,310 C66,334 66,362 70,388 C76,391 83,386 84,372 C86,342 84,320 82,310 C78,306 74,306 71,310 Z', fib: 'v', lines: 'M77,312 C74,340 75,366 78,386' },
+  ],
+  back: [
+    { key: 'traps',    name: 'Traps',      d: 'M99,46 C88,48 74,58 62,66 C74,72 88,84 96,104 L99,104 Z', fib: 'd' },
+    { key: 'delts',    name: 'Rear delts', d: 'M58,64 C50,66 45,76 46,88 C48,96 56,98 62,94 C70,88 72,76 70,68 C67,64 62,63 58,64 Z', fib: 'v' },
+    { key: 'lats',     name: 'Lats',       d: 'M96,104 C86,102 74,98 66,100 C64,120 70,146 84,170 C92,176 99,176 99,164 L99,106 Z', fib: 'd', lines: 'M72,104 C74,128 80,150 90,170 M84,104 C84,126 88,146 96,164' },
+    { key: 'triceps',  name: 'Triceps',    d: 'M47,92 C42,104 40,120 44,134 C50,140 58,136 60,124 C61,110 58,98 54,92 Z', fib: 'v', lines: 'M50,96 C46,110 46,124 48,134 M56,98 C54,112 54,126 55,134' },
+    { key: 'forearms', name: 'Forearms',   d: 'M43,138 C36,150 30,168 30,186 C33,190 39,188 41,180 C45,166 50,152 53,140 C50,136 46,135 43,138 Z', fib: 'v' },
+    { key: 'erectors', name: 'Lower back', d: 'M90,140 C88,156 88,172 90,186 L99,186 L99,140 Z', fib: 'v' },
+    { key: 'glutes',   name: 'Glutes',     d: 'M70,180 C62,188 62,208 72,216 C84,220 97,216 99,206 L99,182 C90,178 78,178 70,180 Z', fib: 'd' },
+    { key: 'hams',     name: 'Hamstrings', d: 'M70,220 C64,242 64,272 68,298 C76,302 88,302 94,292 C98,272 98,242 96,220 Z', fib: 'v', lines: 'M82,222 C80,250 80,280 84,298' },
+    { key: 'calves',   name: 'Calves',     d: 'M70,308 C64,332 66,358 72,382 C80,388 87,382 88,366 C90,342 88,318 84,308 C80,304 74,304 70,308 Z', fib: 'v', lines: 'M79,310 C77,336 78,360 80,380' },
+  ],
+};
+// which muscles an exercise hits, from its primary muscle label (fallback: its picker group)
+const BM_MUSCLE = { 'Chest': ['chest'], 'Upper chest': ['chest', 'delts'], 'Triceps': ['triceps'], 'Biceps': ['biceps', 'forearms'], 'Shoulders': ['delts', 'traps'], 'Side delts': ['delts'], 'Rear delts': ['delts', 'traps'],
+  'Quads': ['quads', 'adductors'], 'Hamstrings': ['hams', 'glutes'], 'Glutes': ['glutes', 'hams'], 'Calves': ['calves'], 'Lats': ['lats', 'biceps'], 'Upper back': ['lats', 'traps', 'delts'], 'Traps': ['traps'],
+  'Abs': ['abs', 'obliques'], 'Lower back': ['erectors'], 'Posterior chain': ['erectors', 'glutes', 'hams'], 'Full body': ['quads', 'glutes', 'traps', 'erectors'] };
+const BM_GROUP = { chest: ['chest'], back: ['lats', 'traps'], shoulders: ['delts'], legs: ['quads', 'hams', 'calves'], glutes: ['glutes'], arms: ['biceps', 'triceps', 'forearms'], core: ['abs', 'obliques'] };
+let bmSets = {};
 function bodyMap() {
-  // sets per muscle group in the last 7 days
-  const cut = Date.now() - 7 * DAY, g = {};
-  for (const s of state.sessions) if (s.date >= cut) for (const e of s.entries || []) { const ex = exById[e.exId]; if (!ex) continue; g[ex.group] = (g[ex.group] || 0) + e.sets.filter(x => !x.warmup).length; }
-  const op = k => g[k] ? (0.35 + Math.min(0.65, g[k] / 15)).toFixed(2) : 0;
-  const part = (k, shape) => shape.replace('<S', '<S').replace(/class="m"/g, 'class="' + (g[k] ? 'g' : 'm') + '"' + (g[k] ? ' opacity="' + op(k) + '"' : ''));
-  const front = '<svg viewBox="0 0 100 200">' +
-    '<circle cx="50" cy="16" r="11" class="m"/>' +
-    part('shoulders', '<ellipse cx="30" cy="42" rx="9" ry="7" class="m"/><ellipse cx="70" cy="42" rx="9" ry="7" class="m"/>') +
-    part('chest', '<path d="M34 38h14v16q-4 5-14 4z" class="m"/><path d="M66 38h-14v16q4 5 14 4z" class="m"/>') +
-    part('core', '<rect x="39" y="60" width="22" height="34" rx="5" class="m"/>') +
-    part('arms', '<rect x="18" y="49" width="10" height="30" rx="5" class="m"/><rect x="72" y="49" width="10" height="30" rx="5" class="m"/><rect x="15" y="81" width="9" height="28" rx="4.5" class="m"/><rect x="76" y="81" width="9" height="28" rx="4.5" class="m"/>') +
-    part('legs', '<rect x="32" y="96" width="16" height="50" rx="7" class="m"/><rect x="52" y="96" width="16" height="50" rx="7" class="m"/><rect x="34" y="150" width="12" height="38" rx="6" class="m"/><rect x="54" y="150" width="12" height="38" rx="6" class="m"/>') + '</svg>';
-  const back = '<svg viewBox="0 0 100 200">' +
-    '<circle cx="50" cy="16" r="11" class="m"/>' +
-    part('shoulders', '<ellipse cx="30" cy="42" rx="9" ry="7" class="m"/><ellipse cx="70" cy="42" rx="9" ry="7" class="m"/>') +
-    part('back', '<path d="M38 36h24l3 8-4 26H39l-4-26z" class="m"/><rect x="41" y="72" width="18" height="20" rx="4" class="m"/>') +
-    part('arms', '<rect x="18" y="49" width="10" height="30" rx="5" class="m"/><rect x="72" y="49" width="10" height="30" rx="5" class="m"/><rect x="15" y="81" width="9" height="28" rx="4.5" class="m"/><rect x="76" y="81" width="9" height="28" rx="4.5" class="m"/>') +
-    part('glutes', '<ellipse cx="41" cy="102" rx="9" ry="9" class="m"/><ellipse cx="59" cy="102" rx="9" ry="9" class="m"/>') +
-    part('legs', '<rect x="32" y="112" width="16" height="36" rx="7" class="m"/><rect x="52" y="112" width="16" height="36" rx="7" class="m"/><rect x="34" y="150" width="12" height="38" rx="6" class="m"/><rect x="54" y="150" width="12" height="38" rx="6" class="m"/>') + '</svg>';
-  return '<div class="bodymap">' + front + back + '</div>';
+  const cut = Date.now() - 7 * DAY; bmSets = {};
+  for (const s of state.sessions) if (s.date >= cut) for (const e of s.entries || []) {
+    const ex = exById[e.exId]; if (!ex) continue; const n = e.sets.filter(x => !x.warmup).length; if (!n) continue;
+    for (const k of (BM_MUSCLE[ex.muscle] || BM_GROUP[ex.group] || [])) bmSets[k] = (bmSets[k] || 0) + n;
+  }
+  const anyLit = Object.keys(bmSets).length > 0;
+  const fibPat = { v: 'M2,0 V6', h: 'M0,3 H6', d: 'M0,6 L6,0' };
+  const defs = '<defs><filter id="bmglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter>' +
+    '<radialGradient id="bmsheen" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>' +
+    Object.keys(fibPat).map(k => '<pattern id="fib' + k + '" patternUnits="userSpaceOnUse" width="6" height="6"><path d="' + fibPat[k] + '" class="fib"/></pattern>' +
+      '<pattern id="fibl' + k + '" patternUnits="userSpaceOnUse" width="6" height="6"><path d="' + fibPat[k] + '" style="stroke:rgba(20,60,10,.55);stroke-width:.5;fill:none"/></pattern>').join('') + '</defs>';
+  const sil = (back) => '<ellipse class="sil" cx="100" cy="27" rx="15" ry="19"/><path class="sil" d="M92,44 L108,44 L110,58 L90,58 Z"/>' +
+    '<path class="sil" d="M100,58 C78,58 58,62 50,70 C38,84 36,110 32,140 C26,160 22,180 22,192 C24,200 34,200 36,192 C42,170 50,146 56,126 L60,150 C60,170 62,190 68,204 C60,240 58,300 66,320 C64,350 64,380 66,396 C64,406 80,408 84,400 C90,370 92,330 92,320 L100,320 L108,320 C108,330 110,370 116,400 C120,408 136,406 134,396 C136,380 136,350 134,320 C142,300 140,240 132,204 C138,190 140,170 140,150 L144,126 C150,146 158,170 164,192 C166,200 176,200 178,192 C178,180 174,160 168,140 C164,110 162,84 150,70 C142,62 122,58 100,58 Z"/>';
+  const muscleLayer = (list) => list.map(m => {
+    const n = bmSets[m.key] || 0, lit = n > 0, op = lit ? Math.min(1, 0.55 + n / 20) : 0;
+    const both = ['', 'matrix(-1,0,0,1,200,0)'].map(t => '<g' + (t ? ' transform="' + t + '"' : '') + '>' +
+      (lit ? '<path class="glow' + (anyLit ? ' pulse' : '') + '" d="' + m.d + '" style="opacity:' + (op * 0.6).toFixed(2) + '"/>' : '') +
+      '<path class="mu' + (lit ? ' lit' : '') + '" d="' + m.d + '" data-bm="' + m.key + '"' + (lit ? ' style="fill-opacity:' + op.toFixed(2) + '"' : '') + '><title>' + m.name + (lit ? ' · ' + n + ' sets this week' : ' · not trained this week') + '</title></path>' +
+      '<path class="fib" d="' + m.d + '" fill="url(#fib' + (lit ? 'l' : '') + m.fib + ')" style="stroke:none"/>' +
+      '<path class="fib" d="' + m.d + '" fill="url(#bmsheen)" style="stroke:none"/>' +
+      (m.lines ? '<path class="fib" d="' + m.lines + '" style="stroke:' + (lit ? 'rgba(10,40,10,.7)' : 'rgba(5,8,12,.9)') + ';stroke-width:.9"/>' : '') +
+      '</g>').join('');
+    return both;
+  }).join('');
+  const nerves = (keys) => {
+    const live = k => keys.some(x => bmSets[x]) ? ' live' : '';
+    const seg = (d, k) => ['', 'matrix(-1,0,0,1,200,0)'].map(t => '<path class="nerve' + live(k) + '" d="' + d + '"' + (t ? ' transform="' + t + '"' : '') + '/>').join('');
+    const node = (x, y, k) => ['', 'matrix(-1,0,0,1,200,0)'].map(t => '<circle class="node' + live(k) + '" cx="' + x + '" cy="' + y + '" r="1.3"' + (t ? ' transform="' + t + '"' : '') + '/>').join('');
+    return '<path class="nerve' + live(['abs', 'erectors', 'chest', 'lats', 'traps']) + '" d="M100,46 V204"/>' +
+      seg('M100,62 C84,62 66,68 54,80 C48,96 44,120 40,150 C36,170 32,182 30,190', ['delts', 'biceps', 'triceps', 'forearms']) +
+      seg('M100,204 C90,210 82,240 80,270 C76,300 72,340 72,392', ['quads', 'hams', 'calves', 'glutes', 'adductors']) +
+      node(54, 80, ['delts']) + node(44, 120, ['biceps', 'triceps']) + node(80, 270, ['quads', 'hams']) + node(72, 306, ['calves']) + '<circle class="node' + live(['abs', 'erectors']) + '" cx="100" cy="140" r="1.3"/>';
+  };
+  const fig = (list, back) => '<svg viewBox="14 4 172 410" role="img" aria-label="' + (back ? 'Back' : 'Front') + ' body map">' + defs + sil(back) + nerves(list.map(m => m.key)) + muscleLayer(list) + '<text class="lab" x="100" y="412" text-anchor="middle">' + (back ? 'Back' : 'Front') + '</text></svg>';
+  return '<div class="bodymap">' + fig(BM.front, false) + fig(BM.back, true) + '</div>' +
+    '<div class="bm-legend"><span><i style="background:var(--gr);box-shadow:0 0 6px var(--gr)"></i>Trained · brighter = more sets</span><span><i style="background:#18222C;box-shadow:inset 0 0 0 1px rgba(62,230,255,.4)"></i>Not yet this week</span></div>';
 }
 function viewProgress() {
   const an = analyses(), list = Object.values(an).sort((a, b) => b.current - a.current);
@@ -1105,6 +1169,8 @@ function afterRender() {
   if (tab === 'workout' && state.active) { requestWake(); state.active.entries.forEach((e, i) => refreshBeating(i)); }
   if (tab === 'progress') {
     $$('[data-lift]').forEach(el => el.onclick = e => { if (e.target.closest('.callout')) return; expandedLift = expandedLift === el.dataset.lift ? null : el.dataset.lift; $$('[data-lift]').forEach(x => x.classList.toggle('open', x.dataset.lift === expandedLift)); });
+    const names = {}; BM.front.concat(BM.back).forEach(m => names[m.key] = m.name);
+    $$('.bodymap [data-bm]').forEach(el => el.onclick = () => { const k = el.dataset.bm, n = bmSets[k] || 0; toast(names[k] + (n ? ' · ' + n + ' set' + (n === 1 ? '' : 's') + ' in the last 7 days' : ' · not trained this week')); });
   }
   if (tab === 'workout' && state.active) {
     $('#wname').oninput = e => { state.active.name = e.target.value; save(); };

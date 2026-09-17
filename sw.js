@@ -2,7 +2,7 @@
    Strategy: NETWORK FIRST for the app's own files, so every open shows the latest deploy.
    The cache is only used when the network is down or takes longer than NET_TIMEOUT.
    Fetches bypass the HTTP cache so a fresh deploy is never masked by a stale 10-minute copy. */
-const VERSION = 'arise-v8';
+const VERSION = 'arise-v9';
 const NET_TIMEOUT = 3500; // ms before we give up on the network and serve the cached copy
 const SHELL = [
   './',
