@@ -489,7 +489,7 @@ function viewHome() {
     const last = lastPerformed(r.id);
     return '<div class="lrow" data-start-routine="' + esc(r.id) + '"><div class="grow"><div class="t">' + esc(r.name) + '</div><div class="s">' + r.items.length + ' exercises' + (last ? ' · last ' + C.fmtDate(last) : ' · never done') + '</div></div><span class="btn ghost sm">Start</span></div>';
   }).join('');
-  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + levelCard() + dailyQuestCard() + questCard() +
+  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + installCard() + levelCard() + dailyQuestCard() + questCard() +
     '<button class="btn primary full" id="start-empty" style="margin:4px 0 16px">Start empty workout</button>' +
     '<div class="kicker" style="margin:0 4px 6px">Routines</div><div class="card" style="padding:4px 12px">' + (routines || '<div class="empty small">No routines yet. Build one in the Routines tab.</div>') + '</div>' + recentCard();
 }
@@ -983,6 +983,12 @@ function unitText(t) {
 
 // ---------- PROFILE ----------
 let persistState = null, installEvt = null;
+function isStandalone() { try { return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { return false; } }
+function installCard() {
+  if (isStandalone() || !installEvt) return '';
+  return '<div class="card quest" style="border-left-color:var(--cy)"><div class="row"><div class="grow"><div class="kicker">Install</div><div style="font-weight:600;margin-top:2px">Put Arise on your home screen</div><div class="small muted">Full screen, works offline, and your log is protected.</div></div><button class="btn primary sm" id="home-install">Install</button></div></div>';
+}
+async function doInstall() { if (!installEvt) return; const ev = installEvt; ev.prompt(); try { await ev.userChoice; } catch (e) {} installEvt = null; render(); }
 function viewProfile() {
   const p = P(), L = C.levelFromXp(state.game.xp);
   const ach = C.ACHIEVEMENTS.map(a => '<div class="a' + (state.game.achievements[a.id] ? ' on' : '') + '"><span class="dot"></span><span class="n">' + esc(a.name) + '</span><span class="d">' + esc(a.desc) + '</span></div>').join('');
@@ -996,8 +1002,8 @@ function viewProfile() {
     '<div class="card"><div class="row"><div class="grow"><div class="kicker">Rank card</div><div class="small muted" style="margin-top:2px">Your rank, level, streak and top lifts as an image to share.</div></div><button class="btn primary sm" id="p-card">Make card</button></div></div>' +
     '<div class="card"><div class="kicker" style="margin-bottom:10px">Achievements · ' + Object.keys(state.game.achievements).length + '/' + C.ACHIEVEMENTS.length + '</div><div class="ach">' + ach + '</div></div>' +
     '<div class="card"><div class="kicker" style="margin-bottom:10px">Data</div>' +
-    '<div class="row" style="margin-bottom:10px"><span class="small grow ' + (persistState === true ? 'muted' : persistState === false ? 'rd' : 'dim') + '">' + (persistState === true ? 'Storage is persistent. Chrome will not evict your log.' : persistState === false ? 'Persistent storage NOT granted. Install the app and export a backup regularly.' : 'Checking storage persistence…') + '</span></div>' +
-    (installEvt ? '<button class="btn primary full" id="p-install" style="margin-bottom:10px">Install app</button>' : '') +
+    '<div class="row" style="margin-bottom:10px"><span class="small dim grow">' + (isStandalone() ? 'Installed. Your log lives on this device' + (persistState === true ? ' and is protected from cleanup.' : '. Export a backup now and then.') : 'Running in the browser. Install the app for full screen and protected storage.') + '</span></div>' +
+    (installEvt && !isStandalone() ? '<button class="btn primary full" id="p-install" style="margin-bottom:10px">Install app</button>' : '') +
     '<div class="row"><button class="btn ghost grow" id="p-export">Export JSON</button><button class="btn ghost grow" id="p-import">Import JSON</button><input type="file" id="p-file" accept="application/json,.json" hidden></div>' +
     '<div class="small dim" style="margin-top:10px">' + state.sessions.length + ' workouts · ' + state.routines.length + ' routines · ' + state.custom.length + ' custom exercises' + (saveErr ? ' · <span class="rd">last save failed</span>' : '') + '</div></div>' +
     '<button class="btn danger full" id="p-erase">Erase all data</button>' +
@@ -1012,7 +1018,7 @@ function bindProfile() {
   const nb = $('#p-notify'); if (nb) nb.onclick = async () => { P().notify = 'unasked'; await ensureNotify(); render(); };
   $('#p-card').onclick = rankCard;
   $$('#p-sex button').forEach(b => b.onclick = () => { P().sex = b.dataset.v; invalidate(); save(); render(); });
-  const ib = $('#p-install'); if (ib) ib.onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; render(); };
+  const ib = $('#p-install'); if (ib) ib.onclick = doInstall;
   $('#p-export').onclick = () => {
     const blob = new Blob([JSON.stringify({ app: 'arise', version: 1, exportedAt: new Date().toISOString(), data: state }, null, 1)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arise-backup-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -1079,6 +1085,7 @@ function afterRender() {
     $('#start-empty').onclick = () => startWorkout(null);
     $$('[data-start-routine]').forEach(el => el.onclick = () => startWorkout(state.routines.find(r => r.id === el.dataset.startRoutine)));
     const sh = $('#see-history'); if (sh) sh.onclick = () => { sub = { view: 'history' }; render(); };
+    const hi = $('#home-install'); if (hi) hi.onclick = doInstall;
     $$('[data-hist]').forEach(el => el.onclick = () => { openHist = el.dataset.hist; sub = { view: 'history' }; render(); });
   }
   if (tab === 'workout' && state.active) { requestWake(); state.active.entries.forEach((e, i) => refreshBeating(i)); }
@@ -1182,7 +1189,8 @@ if (state.active && !hashTab) tab = 'workout';
 render(); updateRest();
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(g => { persistState = !!g; if (tab === 'profile') render(); }).catch(() => { persistState = false; });
 else persistState = false;
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (tab === 'profile') render(); });
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!state.active && (tab === 'profile' || tab === 'workout')) render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; toast('Installed. Open Arise from your home screen.'); render(); });
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { load(); buildEx(); invalidate(); updateRest(); if (!picker) render(); requestWake(); } });
 window.ARISE_DEBUG = { showRankUp, rankCard };
