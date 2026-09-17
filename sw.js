@@ -1,6 +1,9 @@
-/* Arise service worker — precache the app shell so it opens with no network,
-   and fire a best-effort "rest over" notification when the page asks for one. */
-const VERSION = 'arise-v7';
+/* Arise service worker.
+   Strategy: NETWORK FIRST for the app's own files, so every open shows the latest deploy.
+   The cache is only used when the network is down or takes longer than NET_TIMEOUT.
+   Fetches bypass the HTTP cache so a fresh deploy is never masked by a stale 10-minute copy. */
+const VERSION = 'arise-v8';
+const NET_TIMEOUT = 3500; // ms before we give up on the network and serve the cached copy
 const SHELL = [
   './',
   './index.html',
@@ -11,8 +14,13 @@ const SHELL = [
   './icons/icon-512-maskable.png',
 ];
 
+const fresh = (url) => fetch(new Request(url, { cache: 'no-cache', credentials: 'same-origin' }));
+
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(VERSION).then((c) => Promise.all(SHELL.map((u) => fresh(u).then((r) => { if (r && r.ok) return c.put(u, r); }).catch(() => {}))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -29,16 +37,23 @@ self.addEventListener('fetch', (e) => {
   const sameOrigin = url.origin === self.location.origin;
 
   if (sameOrigin) {
-    // App shell: cache first, refresh in background so updates land on the next open.
-    e.respondWith(
-      caches.match(req, { ignoreSearch: true }).then((hit) => {
-        const refresh = fetch(req).then((res) => {
-          if (res && res.ok) caches.open(VERSION).then((c) => c.put(req, res.clone()));
-          return res;
-        }).catch(() => hit);
-        return hit || refresh;
-      })
-    );
+    e.respondWith((async () => {
+      const cache = await caches.open(VERSION);
+      const cached = await cache.match(req, { ignoreSearch: true });
+      const network = fresh(req.url).then((res) => {
+        if (res && res.ok) cache.put(req.url.split('?')[0], res.clone());
+        return res;
+      });
+      // Race the network against a timeout only when we have something cached to fall back to.
+      const timeout = cached ? new Promise((r) => setTimeout(() => r(null), NET_TIMEOUT)) : new Promise(() => {});
+      try {
+        const res = await Promise.race([network, timeout]);
+        if (res) return res;
+      } catch (err) { /* offline */ }
+      if (cached) return cached;
+      if (req.mode === 'navigate') return (await cache.match('./index.html')) || Response.error();
+      return Response.error();
+    })());
     return;
   }
 

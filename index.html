@@ -287,6 +287,7 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
+const APP_VERSION = '1.2.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
@@ -1017,7 +1018,8 @@ function viewProfile() {
       '<p class="small dim" style="margin-bottom:12px">' + (isStandalone() ? 'Your log lives on this device' + (persistState === true ? ' and is protected from cleanup.' : '.') : 'Running in the browser. Install the app for protected storage.') + ' There is no account and nothing is uploaded, so a backup file is the only copy outside this phone.</p>' +
       '<div class="row"><button class="btn ghost grow" id="p-export">Export backup</button><button class="btn ghost grow" id="p-import">Import backup</button><input type="file" id="p-file" accept="application/json,.json" hidden></div>' +
       '<button class="btn danger full" id="p-erase" style="margin-top:12px">Erase all data</button>' +
-      '<p class="note" style="margin-top:14px">Strength tiers and percentiles are estimates from published strength standards, not from other users. e1RM uses Epley with reps capped at 12. Baseline is your best in the first 14 days on a lift; current is your best in the last 28.</p></div>' : '') + '</div>';
+      '<p class="note" style="margin-top:14px">Strength tiers and percentiles are estimates from published strength standards, not from other users. e1RM uses Epley with reps capped at 12. Baseline is your best in the first 14 days on a lift; current is your best in the last 28.</p></div>' : '') + '</div>' +
+    '<div class="small dim" style="text-align:center;margin:8px 0 16px">Arise v' + APP_VERSION + '</div>';
 }
 function bindProfile() {
   const num = (id, key, min, max, conv) => { const el = $(id); if (!el) return; el.onchange = () => { let v = +el.value; if (isNaN(v)) return; v = Math.max(min, Math.min(max, v)); P()[key] = conv ? conv(v) : v; invalidate(); save(); render(); }; };
@@ -1204,10 +1206,11 @@ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().
 else persistState = false;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!state.active && (tab === 'profile' || tab === 'workout')) render(); });
 window.addEventListener('appinstalled', () => { installEvt = null; toast('Installed. Open Arise from your home screen.'); render(); });
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(reg => {
-  // a new version was fetched in the background: offer a one-tap refresh instead of silently showing it next time
-  const offer = () => { const t = $('#toast'); t.textContent = 'Update ready. Tap to refresh.'; t.className = 'toast on'; clearTimeout(toastT); t.onclick = () => location.reload(); toastT = setTimeout(() => { t.classList.remove('on'); t.onclick = null; }, 8000); };
-  reg.addEventListener('updatefound', () => { const w = reg.installing; if (!w || !navigator.serviceWorker.controller) return; w.addEventListener('statechange', () => { if (w.state === 'activated') offer(); }); });
+// The service worker is network-first, so every open fetches the latest deploy; it also re-checks
+// for a new worker on every launch and when the app comes back to the foreground.
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+  reg.update().catch(() => {});
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
 }).catch(() => {}));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { load(); buildEx(); invalidate(); updateRest(); if (!picker) render(); requestWake(); } });
 window.ARISE_DEBUG = { showRankUp, rankCard };

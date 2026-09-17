@@ -21,7 +21,7 @@ Personal strength-training PWA. Logs workouts Hevy-style, then tells you in plai
 
 Everything is relative-pathed, so it works from a subfolder like `username.github.io/arise/`.
 
-When you change files, bump `VERSION` in `sw.js` so installed copies pick up the update on their next open.
+The service worker is network-first: every open fetches the live files (bypassing the HTTP cache) and only falls back to the cached copy when offline or when the network takes more than 3.5 s. A deploy shows up on the very next open. Bump `APP_VERSION` in `index.html` (shown at the bottom of Profile) and `VERSION` in `sw.js` when you release, so you can tell versions apart.
 
 ## What's in v1.1
 
