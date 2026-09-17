@@ -236,5 +236,17 @@ console.log('\nDaily quest');
   eq('same key all day', C.dailyQuest(an, exById, stSafe, base + 45 * DAY + 3600e3 * 3).key, q.key);
 }
 
+console.log('\nLibrary and programs');
+{
+  const ids = new Set(C.EX.map(e => e.id));
+  eq('no duplicate exercise ids', ids.size, C.EX.length);
+  eq('every standards key exists', C.EX.every(e => !e.std || C.STD[e.std]), true);
+  const p = C.PROGRAMS[0];
+  eq('PPLP has 4 routines', p.routines.length, 4);
+  eq('every program exercise exists in the library', p.routines.every(r => r.items.every(i => ids.has(i[0]))), true);
+  eq('every program item has sets, reps range, rest', p.routines.every(r => r.items.every(i => i[1] > 0 && i[2] > 0 && i[3] >= i[2] && i[4] >= 0)), true);
+  eq('31 exercise slots', p.routines.reduce((n, r) => n + r.items.length, 0), 31);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

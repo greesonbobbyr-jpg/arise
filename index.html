@@ -838,10 +838,19 @@ function viewRoutines() {
   const cards = state.routines.map(r => {
     const ch = routineChange(r), last = lastPerformed(r.id);
     return '<div class="card"><div class="row" style="margin-bottom:6px"><h2 class="grow" style="font-size:17px">' + esc(r.name) + '</h2>' + (ch == null ? '<span class="small dim">forming</span>' : '<span class="num ' + (ch >= 0 ? 'gr' : 'rd') + '">' + pct(ch) + '</span>') + '</div>' +
-      '<div class="small muted" style="margin-bottom:10px">' + r.items.map(i => esc((exById[i.exId] || {}).name || '?') + ' <span class="mono">' + i.sets + '×' + i.reps + '</span>').join(' · ') + '</div>' +
+      '<div class="small muted" style="margin-bottom:10px">' + r.items.map(i => esc((exById[i.exId] || {}).name || '?') + ' <span class="mono">' + i.sets + '×' + repsLabel(i) + '</span>').join(' · ') + '</div>' +
       '<div class="row"><span class="small dim grow">' + (last ? 'Last ' + C.fmtDate(last) : 'Never performed') + '</span><button class="btn ghost sm" data-edit-routine="' + esc(r.id) + '">Edit</button><button class="btn primary sm" data-start-routine="' + esc(r.id) + '">Start</button></div></div>';
   }).join('');
-  return '<div class="top"><h1>Routines</h1><button class="btn primary sm" id="new-routine">' + icon('plus') + ' New</button></div>' + (cards || '<div class="empty">No routines yet.<br><span class="small">Build one and start it in one tap.</span></div>');
+  return '<div class="top"><h1>Routines</h1><button class="btn primary sm" id="new-routine">' + icon('plus') + ' New</button></div>' + (cards || '<div class="empty">No routines yet.<br><span class="small">Build one, or add a program below.</span></div>') +
+    '<div class="kicker" style="margin:18px 4px 6px">Programs</div>' + C.PROGRAMS.map(p => '<div class="card"><div class="row"><div class="grow"><div style="font-weight:600">' + esc(p.name) + '</div><div class="small muted" style="margin-top:2px">' + esc(p.desc) + ' ' + p.routines.length + ' routines.</div></div><button class="btn ghost sm" data-program="' + esc(p.id) + '">Add</button></div></div>').join('');
+}
+function repsLabel(i) { return i.repsMax && i.repsMax > i.reps ? i.reps + '–' + i.repsMax : String(i.reps); }
+async function addProgram(id) {
+  const p = C.PROGRAMS.find(x => x.id === id); if (!p) return;
+  const existing = p.routines.filter(r => state.routines.some(x => x.name === r.name));
+  if (!(await confirmDlg('Add ' + p.name + '?', p.routines.map(r => r.name).join(', ') + ' will be added as routines you can edit.' + (existing.length ? ' You already have ' + existing.map(r => r.name).join(', ') + '; those will be added as copies.' : ''), 'Add ' + p.routines.length + ' routines'))) return;
+  for (const r of p.routines) state.routines.push({ id: uid(), name: r.name, items: r.items.map(([exId, sets, reps, repsMax, restSec]) => ({ exId, sets, reps, repsMax, restSec })) });
+  save(); toast(p.routines.length + ' routines added'); render();
 }
 let draft = null;
 function viewRoutineEdit() {
@@ -849,7 +858,7 @@ function viewRoutineEdit() {
   const items = r.items.map((it, i) => {
     const ex = exById[it.exId] || { name: '?' };
     return '<div class="ritem" data-i="' + i + '"><div class="drag" data-drag="' + i + '">' + icon('drag') + '</div><div class="grow"><div style="font-weight:600;font-size:var(--fs-s);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(ex.name) + '</div>' +
-      '<div class="row" style="gap:6px;margin-top:4px"><input class="in" type="number" inputmode="numeric" data-rs="' + i + '" value="' + it.sets + '" aria-label="sets"><span class="dim">×</span><input class="in" type="number" inputmode="numeric" data-rr="' + i + '" value="' + it.reps + '" aria-label="reps"><input class="in" type="number" inputmode="numeric" data-rt="' + i + '" value="' + it.restSec + '" aria-label="rest seconds" title="rest (s)"><span class="small dim">s</span></div></div>' +
+      '<div class="row" style="gap:6px;margin-top:4px"><input class="in" type="number" inputmode="numeric" data-rs="' + i + '" value="' + it.sets + '" aria-label="sets"><span class="dim">×</span><input class="in" type="number" inputmode="numeric" data-rr="' + i + '" value="' + it.reps + '" aria-label="reps"><span class="dim">–</span><input class="in" type="number" inputmode="numeric" data-rx="' + i + '" value="' + (it.repsMax || '') + '" placeholder="max" aria-label="reps max"><input class="in" type="number" inputmode="numeric" data-rt="' + i + '" value="' + it.restSec + '" aria-label="rest seconds" title="rest (s)"><span class="small dim">s</span></div></div>' +
       '<button class="icon-btn" data-rdel="' + i + '">' + icon('x') + '</button></div>';
   }).join('');
   return '<div class="top"><button class="icon-btn" id="r-back">' + icon('back') + '</button><h1 class="grow">' + (r.isNew ? 'New routine' : 'Edit routine') + '</h1><button class="btn primary sm" id="r-save">Save</button></div>' +
@@ -861,8 +870,9 @@ function viewRoutineEdit() {
 function readDraft() {
   draft.name = $('#r-name').value.trim() || draft.name;
   draft.items.forEach((it, i) => {
-    const s = $('[data-rs="' + i + '"]'), r = $('[data-rr="' + i + '"]'), t = $('[data-rt="' + i + '"]');
+    const s = $('[data-rs="' + i + '"]'), r = $('[data-rr="' + i + '"]'), x = $('[data-rx="' + i + '"]'), t = $('[data-rt="' + i + '"]');
     if (s) it.sets = Math.max(1, Math.floor(+s.value || 1)); if (r) it.reps = Math.max(0, Math.floor(+r.value || 0)); if (t) it.restSec = Math.max(0, Math.floor(+t.value || 0));
+    if (x) { const v = Math.floor(+x.value || 0); it.repsMax = v > it.reps ? v : undefined; }
   });
 }
 function bindDrag() {
@@ -1103,6 +1113,7 @@ function afterRender() {
   if (tab === 'routines' && !(sub && sub.view === 'routine-edit')) {
     $('#new-routine').onclick = () => { draft = { id: uid(), name: '', items: [], isNew: true }; sub = { view: 'routine-edit' }; render(); };
     $$('[data-edit-routine]').forEach(b => b.onclick = () => { const r = state.routines.find(x => x.id === b.dataset.editRoutine); draft = JSON.parse(JSON.stringify(r)); sub = { view: 'routine-edit' }; render(); });
+    $$('[data-program]').forEach(b => b.onclick = () => addProgram(b.dataset.program));
     $$('[data-start-routine]').forEach(b => b.onclick = async () => {
       if (state.active && !(await confirmDlg('Workout in progress', 'Starting a routine will discard the current workout.', 'Discard and start', true))) return;
       startWorkout(state.routines.find(r => r.id === b.dataset.startRoutine));
@@ -1113,7 +1124,7 @@ function afterRender() {
     $('#r-save').onclick = () => {
       readDraft(); if (!draft.name) { toast('Give the routine a name'); $('#r-name').focus(); return; }
       if (!draft.items.length) { toast('Add at least one exercise'); return; }
-      const clean = { id: draft.id, name: draft.name, items: draft.items.map(i => ({ exId: i.exId, sets: i.sets, reps: i.reps, restSec: i.restSec })) };
+      const clean = { id: draft.id, name: draft.name, items: draft.items.map(i => ({ exId: i.exId, sets: i.sets, reps: i.reps, repsMax: i.repsMax, restSec: i.restSec })) };
       const idx = state.routines.findIndex(r => r.id === draft.id); if (idx >= 0) state.routines[idx] = clean; else state.routines.push(clean);
       save(); sub = null; draft = null; toast('Routine saved'); render();
     };

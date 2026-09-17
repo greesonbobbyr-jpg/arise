@@ -62,6 +62,35 @@
     { id: 'mc_pushdown',   name: 'Tricep Pushdown',         cat: 'arms',  equip: 'Cable',   muscle: 'Triceps',    group: 'arms' },
     { id: 'mc_cable_curl', name: 'Cable Curl',              cat: 'arms',  equip: 'Cable',   muscle: 'Biceps',     group: 'arms' },
     { id: 'mc_cable_crunch',name:'Cable Crunch',            cat: 'core',  equip: 'Cable',   muscle: 'Abs',        group: 'core' },
+    { id: 'mc_oh_tri_ext',  name: 'Overhead Cable Triceps Extension', cat: 'arms', equip: 'Cable', muscle: 'Triceps', group: 'arms' },
+    { id: 'mc_cs_row',      name: 'Chest-Supported Row',    cat: 'pull',  equip: 'Machine', muscle: 'Upper back', group: 'back' },
+    { id: 'mc_one_arm_pulldown', name: 'One-Arm Cable Pulldown', cat: 'pull', equip: 'Cable', muscle: 'Lats',   group: 'back' },
+    { id: 'mc_rear_delt',   name: 'Reverse Pec Deck',       cat: 'pull',  equip: 'Machine', muscle: 'Rear delts', group: 'shoulders' },
+    { id: 'mc_preacher',    name: 'Preacher Curl',          cat: 'arms',  equip: 'Machine', muscle: 'Biceps',     group: 'arms' },
+    { id: 'mc_bayesian_curl', name: 'Bayesian Cable Curl',  cat: 'arms',  equip: 'Cable',   muscle: 'Biceps',     group: 'arms' },
+    { id: 'mc_incline_machine', name: 'Incline Machine Press', cat: 'push', equip: 'Machine', muscle: 'Upper chest', group: 'chest' },
+    { id: 'db_incline_curl',name: 'Incline Dumbbell Curl',  cat: 'arms',  equip: 'Dumbbell', muscle: 'Biceps',    group: 'arms',      perHand: true },
+    { id: 'mc_cable_lateral', name: 'Cable Lateral Raise',  cat: 'push',  equip: 'Cable',   muscle: 'Side delts', group: 'shoulders' },
+  ];
+
+  // ---------- Built-in programs (one tap creates the routines) ----------
+  // item: [exId, sets, repsMin, repsMax, restSec]
+  const PROGRAMS = [
+    { id: 'pplp', name: 'Push / Pull / Legs / Pretty', desc: '4-day recomposition program with an aesthetic day for delts, arms, upper chest and abs.',
+      routines: [
+        { name: 'Push', items: [
+          ['bb_bench', 3, 5, 8, 150], ['db_incline', 3, 8, 12, 120], ['db_shoulder', 3, 8, 12, 120], ['mc_cable_lateral', 3, 12, 20, 60],
+          ['mc_cable_fly', 2, 10, 15, 60], ['mc_pushdown', 3, 10, 15, 60], ['mc_oh_tri_ext', 2, 10, 15, 60] ] },
+        { name: 'Pull', items: [
+          ['bw_pullup', 3, 6, 10, 150], ['mc_cs_row', 3, 8, 12, 120], ['mc_one_arm_pulldown', 2, 10, 15, 90], ['mc_rear_delt', 3, 12, 20, 60],
+          ['mc_preacher', 3, 8, 12, 90], ['mc_bayesian_curl', 3, 10, 15, 60], ['db_hammer', 2, 10, 15, 60] ] },
+        { name: 'Legs', items: [
+          ['bb_squat', 3, 5, 8, 180], ['bb_rdl', 3, 8, 10, 150], ['mc_leg_press', 3, 10, 15, 120], ['mc_leg_curl', 3, 10, 15, 90],
+          ['mc_leg_ext', 2, 12, 15, 60], ['mc_calf', 4, 10, 15, 60], ['mc_cable_crunch', 3, 10, 15, 60], ['bw_hlr', 2, 10, 15, 60] ] },
+        { name: 'Pretty', items: [
+          ['mc_incline_machine', 3, 8, 12, 120], ['mc_cable_lateral', 4, 12, 20, 60], ['mc_rear_delt', 3, 15, 20, 60], ['db_incline_curl', 2, 8, 12, 90],
+          ['mc_cable_curl', 2, 10, 15, 60], ['mc_oh_tri_ext', 3, 10, 15, 60], ['mc_pushdown', 2, 10, 15, 60], ['mc_cable_crunch', 3, 10, 15, 60], ['bw_hlr', 2, 10, 15, 60] ] },
+      ] },
   ];
 
   const GROUPS = ['chest', 'back', 'shoulders', 'legs', 'glutes', 'arms', 'core'];
@@ -459,7 +488,7 @@
   }
 
   root.ARISE_CORE = {
-    DAY, EX, GROUPS, STD, PCTS, TIERS, TIER_SHORT, CAT_NAMES, LOWER_CATS,
+    DAY, EX, PROGRAMS, GROUPS, STD, PCTS, TIERS, TIER_SHORT, CAT_NAMES, LOWER_CATS,
     epley, isRough, round5, setLoad, setE1RM, history, analyze, stall, percentile, ageMult, ordinal,
     readout, median, XP, RANKS, xpForLevel, levelFromXp, startOfWeek, streak, ACHIEVEMENTS, sessionVolume, fmtDate,
     RANK_ORDER, RANK_RULES, rankFor, rankNext, dailyQuest, questDone, monthKey,
