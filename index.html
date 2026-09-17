@@ -982,7 +982,7 @@ function unitText(t) {
 }
 
 // ---------- PROFILE ----------
-let persistState = null, installEvt = null;
+let persistState = null, installEvt = null, showData = false;
 function isStandalone() { try { return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { return false; } }
 function installCard() {
   if (isStandalone() || !installEvt) return '';
@@ -1001,13 +1001,13 @@ function viewProfile() {
     '<div class="row"><span class="small grow ' + (p.notify === 'granted' ? 'muted' : 'dim') + '">Rest-over notifications: ' + (p.notify === 'granted' ? 'on' : p.notify === 'denied' ? 'off' : 'you will be asked on your first rest') + '. Best effort when the screen is off.</span>' + (p.notify !== 'granted' && 'Notification' in window ? '<button class="btn ghost sm" id="p-notify">Enable</button>' : '') + '</div></div>' +
     '<div class="card"><div class="row"><div class="grow"><div class="kicker">Rank card</div><div class="small muted" style="margin-top:2px">Your rank, level, streak and top lifts as an image to share.</div></div><button class="btn primary sm" id="p-card">Make card</button></div></div>' +
     '<div class="card"><div class="kicker" style="margin-bottom:10px">Achievements · ' + Object.keys(state.game.achievements).length + '/' + C.ACHIEVEMENTS.length + '</div><div class="ach">' + ach + '</div></div>' +
-    '<div class="card"><div class="kicker" style="margin-bottom:10px">Data</div>' +
-    '<div class="row" style="margin-bottom:10px"><span class="small dim grow">' + (isStandalone() ? 'Installed. Your log lives on this device' + (persistState === true ? ' and is protected from cleanup.' : '. Export a backup now and then.') : 'Running in the browser. Install the app for full screen and protected storage.') + '</span></div>' +
-    (installEvt && !isStandalone() ? '<button class="btn primary full" id="p-install" style="margin-bottom:10px">Install app</button>' : '') +
-    '<div class="row"><button class="btn ghost grow" id="p-export">Export JSON</button><button class="btn ghost grow" id="p-import">Import JSON</button><input type="file" id="p-file" accept="application/json,.json" hidden></div>' +
-    '<div class="small dim" style="margin-top:10px">' + state.sessions.length + ' workouts · ' + state.routines.length + ' routines · ' + state.custom.length + ' custom exercises' + (saveErr ? ' · <span class="rd">last save failed</span>' : '') + '</div></div>' +
-    '<button class="btn danger full" id="p-erase">Erase all data</button>' +
-    '<p class="note" style="margin:16px 4px 20px">Strength tiers and percentiles are estimates from published strength standards, not from other users of this app. e1RM uses Epley with reps capped at 12. Baseline is your best in the first 14 days on a lift; current is your best in the last 28. Everything stays on this device.</p>';
+    (installEvt && !isStandalone() ? '<button class="btn primary full" id="p-install" style="margin-bottom:12px">Install app</button>' : '') +
+    '<div class="card" style="padding:0"><button class="lrow" id="p-data-toggle" style="width:100%;padding:10px 16px;text-align:left"><div class="grow"><div class="t">Backup &amp; data</div><div class="s">' + state.sessions.length + ' workouts · ' + state.routines.length + ' routines' + (saveErr ? ' · <span class="rd">last save failed</span>' : '') + '</div></div><span class="dim" style="transform:rotate(' + (showData ? '90' : '0') + 'deg);display:inline-block;transition:transform var(--t)">' + icon('back').replace('M15 5l-7 7 7 7', 'M9 5l7 7-7 7') + '</span></button>' +
+    (showData ? '<div style="padding:4px 16px 16px">' +
+      '<p class="small dim" style="margin-bottom:12px">' + (isStandalone() ? 'Your log lives on this device' + (persistState === true ? ' and is protected from cleanup.' : '.') : 'Running in the browser. Install the app for protected storage.') + ' There is no account and nothing is uploaded, so a backup file is the only copy outside this phone.</p>' +
+      '<div class="row"><button class="btn ghost grow" id="p-export">Export backup</button><button class="btn ghost grow" id="p-import">Import backup</button><input type="file" id="p-file" accept="application/json,.json" hidden></div>' +
+      '<button class="btn danger full" id="p-erase" style="margin-top:12px">Erase all data</button>' +
+      '<p class="note" style="margin-top:14px">Strength tiers and percentiles are estimates from published strength standards, not from other users. e1RM uses Epley with reps capped at 12. Baseline is your best in the first 14 days on a lift; current is your best in the last 28.</p></div>' : '') + '</div>';
 }
 function bindProfile() {
   const num = (id, key, min, max, conv) => { const el = $(id); if (!el) return; el.onchange = () => { let v = +el.value; if (isNaN(v)) return; v = Math.max(min, Math.min(max, v)); P()[key] = conv ? conv(v) : v; invalidate(); save(); render(); }; };
@@ -1019,6 +1019,8 @@ function bindProfile() {
   $('#p-card').onclick = rankCard;
   $$('#p-sex button').forEach(b => b.onclick = () => { P().sex = b.dataset.v; invalidate(); save(); render(); });
   const ib = $('#p-install'); if (ib) ib.onclick = doInstall;
+  $('#p-data-toggle').onclick = () => { showData = !showData; render(); };
+  if (!showData) return;
   $('#p-export').onclick = () => {
     const blob = new Blob([JSON.stringify({ app: 'arise', version: 1, exportedAt: new Date().toISOString(), data: state }, null, 1)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arise-backup-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -1191,7 +1193,11 @@ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().
 else persistState = false;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!state.active && (tab === 'profile' || tab === 'workout')) render(); });
 window.addEventListener('appinstalled', () => { installEvt = null; toast('Installed. Open Arise from your home screen.'); render(); });
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(reg => {
+  // a new version was fetched in the background: offer a one-tap refresh instead of silently showing it next time
+  const offer = () => { const t = $('#toast'); t.textContent = 'Update ready. Tap to refresh.'; t.className = 'toast on'; clearTimeout(toastT); t.onclick = () => location.reload(); toastT = setTimeout(() => { t.classList.remove('on'); t.onclick = null; }, 8000); };
+  reg.addEventListener('updatefound', () => { const w = reg.installing; if (!w || !navigator.serviceWorker.controller) return; w.addEventListener('statechange', () => { if (w.state === 'activated') offer(); }); });
+}).catch(() => {}));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { load(); buildEx(); invalidate(); updateRest(); if (!picker) render(); requestWake(); } });
 window.ARISE_DEBUG = { showRankUp, rankCard };
 window.addEventListener('pagehide', save);
