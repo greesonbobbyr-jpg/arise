@@ -11,8 +11,9 @@ B="http://127.0.0.1:8765/index.html"
 LOG="${TMPDIR:-${TEMP:-/tmp}}/arise-e2e"; mkdir -p "$LOG"
 node e2e/cdp.js "$B?demo#workout"  "" 390 e2e/core-flow.js       > "$LOG/core.log" 2>&1 &
 node e2e/cdp.js "$B#routines"      "" 390 e2e/load-and-ranges.js > "$LOG/load.log" 2>&1 &
+node e2e/cdp.js "$B#routines"      "" 390 e2e/program-update.js  > "$LOG/prog.log" 2>&1 &
 node e2e/cdp.js "$B?demo&active#workout" "" 360 e2e/overflow.js > "$LOG/w360.log" 2>&1 &
 node e2e/cdp.js "$B?demo#progress" "" 360 e2e/overflow.js        > "$LOG/p360.log" 2>&1 &
 wait $(jobs -p | grep -v "^$SRV$") 2>/dev/null
-for f in core load w360 p360; do echo "== $f"; grep -E "FAIL|passed|FAILED|CONSOLE|ok   no horizontal" "$LOG/$f.log" || tail -3 "$LOG/$f.log"; done
+for f in core load prog w360 p360; do echo "== $f"; grep -E "FAIL|passed|FAILED|CONSOLE|ok   no horizontal" "$LOG/$f.log" || tail -3 "$LOG/$f.log"; done
 kill $SRV 2>/dev/null

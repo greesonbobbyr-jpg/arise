@@ -23,9 +23,9 @@ module.exports = async (ctx) => {
   const a = (await st()).active;
   check('target stored on entry', a.entries[0].target && a.entries[0].target.reps === 5 && a.entries[0].target.repsMax === 8, a.entries[0].target);
   await shot(path.join(SHOTS, 'push-targets.png'));
-  await type('[data-w="1:0"]', 60); await type('[data-r="1:0"]', 10);
-  await click('[data-ck="1:0"]'); await sleep(300); await dismissNotify();
-  check('live e1RM tagged /DB', /e1RM 80 \/DB/.test(await txt('#exstats-1')), await txt('#exstats-1'));
+  await type('[data-w="2:0"]', 60); await type('[data-r="2:0"]', 10);
+  await click('[data-ck="2:0"]'); await sleep(300); await dismissNotify();
+  check('live e1RM tagged /DB', /e1RM 80 \/DB/.test(await txt('#exstats-2')), await txt('#exstats-2'));
   await click('#finish'); await sleep(200); await click('#modal .acts button.primary'); await sleep(600);
   const sum = (await txt('#modal')).replace(/\s/g, '');
   check('summary volume counts both dumbbells (1200 lb)', /Volume1200/.test(sum), sum.slice(0, 120));

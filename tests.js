@@ -277,7 +277,11 @@ console.log('\nLibrary and programs');
   eq('PPLP has 4 routines', p.routines.length, 4);
   eq('every program exercise exists in the library', p.routines.every(r => r.items.every(i => ids.has(i[0]))), true);
   eq('every program item has sets, reps range, rest', p.routines.every(r => r.items.every(i => i[1] > 0 && i[2] > 0 && i[3] >= i[2] && i[4] >= 0)), true);
-  eq('31 exercise slots', p.routines.reduce((n, r) => n + r.items.length, 0), 31);
+  eq('30 exercise slots (6 / 7 / 8 / 9)', p.routines.map(r => r.items.length).join('/'), '6/7/8/9');
+  eq('Push order: bench, cable lateral, incline DB, fly, pushdown, OH ext', p.routines[0].items.map(i => i[0]).join(','), 'bb_bench,mc_cable_lateral,db_incline,mc_cable_fly,mc_pushdown,mc_oh_tri_ext');
+  eq('Legs uses seated calf raise 4×10–15', JSON.stringify(p.routines[2].items[2].slice(0, 4)), JSON.stringify(['mc_seated_calf', 4, 10, 15]));
+  eq('Pretty opens with seated DB shoulder press 3×8–12', JSON.stringify(p.routines[3].items[0].slice(0, 4)), JSON.stringify(['db_shoulder', 3, 8, 12]));
+  eq('rest: heavy compounds ≥150 s, isolation ≤90 s', p.routines.every(r => r.items.every(i => ['bb_bench', 'bb_squat', 'bb_rdl', 'bw_pullup'].includes(i[0]) ? i[4] >= 150 : ['db_incline', 'db_shoulder', 'mc_cs_row', 'mc_leg_press'].includes(i[0]) ? i[4] >= 90 && i[4] <= 120 : i[4] <= 90)), true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -115,6 +115,8 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .exsub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:-4px 0 8px;padding:0 2px;font-size:var(--fs-s);color:var(--tx2)}
 .exsub .tgt{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:6px;background:var(--cy-tint);color:var(--cy);font-family:var(--f-num);font-weight:600;font-size:12px}
 .exsub .ld{color:var(--tx3)}
+.exsub .tgt.up{background:var(--gr-tint);color:var(--gr);border:0;cursor:pointer;height:32px;padding:0 12px}
+.exsub .tgt.up:active{transform:scale(.97)}
 .thead,.set{display:grid;grid-template-columns:44px 1fr 1fr 1fr 48px;gap:6px;align-items:center}
 .thead{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);font-weight:600;text-align:center;padding:2px 0 6px}
 .thead>:first-child{text-align:left;padding-left:8px}
@@ -306,7 +308,7 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
@@ -358,6 +360,11 @@ const U = () => P().units;
 function wHead(ex) { const m = C.loadMode(ex); return m === 'bw' ? '+' + U() : m === 'db' ? U() + '/DB' : m === 'side' ? U() + '/side' : U(); }
 function wHint(ex) { const m = C.loadMode(ex); return m === 'db' ? 'Weight per dumbbell' : m === 'side' ? 'Weight per side' : m === 'bw' ? 'Added weight · 0 = bodyweight' : ''; }
 function wTag(ex) { const t = C.loadTag(ex); return t ? ' ' + t : ''; }
+function topOfRange(sets, t) {
+  if (!t || !t.repsMax) return false;
+  const w = sets.filter(s => !s.warmup && +s.r > 0);
+  return w.length >= (t.sets || 1) && w.every(s => +s.r >= t.repsMax);
+}
 function repRange(t) { return t && t.reps ? (t.repsMax && t.repsMax > t.reps ? t.reps + '–' + t.repsMax : String(t.reps)) : ''; }
 function fmtSet(ex, s) {
   if (!s) return '—';
@@ -578,6 +585,10 @@ function addExerciseToActive(exId, nSets, reps, restSec, repsMax) {
   }
   const entry = { exId, sets, rest: restSec || state.exRest[exId] || P().defaultRest };
   if (reps) entry.target = { sets: n, reps, repsMax: ranged ? repsMax : undefined };
+  if (ranged && prev && topOfRange(prev.sets, entry.target)) {
+    const from = Math.max(...prev.sets.filter(s => !s.warmup).map(s => +s.w || 0));
+    entry.bump = { from, to: C.round5(from + C.loadStep(ex)) };
+  }
   state.active.entries.push(entry);
 }
 // a workout started before targets were stored: recover them from its routine
@@ -597,7 +608,8 @@ function viewActive() {
     const prev = prevEntry(e.exId);
     const tgt = entryTarget(e), rr = repRange(tgt), hint = wHint(ex);
     html += '<div class="exblock" data-e="' + ei + '"><div class="exh"><h2>' + esc(ex.name) + '</h2><span class="small dim mono">' + fmtTime(e.rest) + '</span><button class="icon-btn" data-exmenu="' + ei + '">' + icon('more') + '</button></div>';
-    if (rr || hint) html += '<div class="exsub">' + (rr ? '<span class="tgt">' + tgt.sets + ' × ' + rr + ' reps</span>' : '') + (hint ? '<span class="ld">' + hint + '</span>' : '') + '</div>';
+    const bump = e.bump && !e.bumped ? '<button class="tgt up" data-bump="' + ei + '">Top of range last time · go to ' + fw(e.bump.to) + ' ' + wHead(ex) + '</button>' : '';
+    if (rr || hint || bump) html += '<div class="exsub">' + (rr ? '<span class="tgt">' + tgt.sets + ' × ' + rr + ' reps</span>' : '') + (hint ? '<span class="ld">' + hint + '</span>' : '') + bump + '</div>';
     html += shadowLine(e, ex);
     html += '<div class="thead"><span>Set</span><span>Previous</span><span>' + wHead(ex) + '</span><span>Reps</span><span></span></div>';
     let wn = 0;
@@ -607,7 +619,7 @@ function viewActive() {
       html += '<div class="set-wrap"><div class="set-del" data-del="' + ei + ':' + si + '">Delete</div><div class="set' + (s.done ? ' done' : '') + '" data-s="' + si + '">' +
         '<button class="n' + (s.warmup ? ' w' : '') + '" data-warm="' + ei + ':' + si + '">' + label + '</button>' +
         '<button class="prev" data-prev="' + ei + ':' + si + '">' + (p ? fmtSet(ex, p) : '—') + '</button>' +
-        '<input class="in num" type="number" inputmode="decimal" step="any" data-w="' + ei + ':' + si + '" value="' + (s.w ? fromLb(s.w) : (ex.bw ? '0' : '')) + '" placeholder="' + wHead(ex) + '">' +
+        '<input class="in num" type="number" inputmode="decimal" step="any" data-w="' + ei + ':' + si + '" value="' + (s.w ? fromLb(s.w) : (ex.bw ? '0' : '')) + '" placeholder="' + (C.loadMode(ex) === 'bw' ? '+' + U() : U()) + '">' +
         '<input class="in num" type="number" inputmode="numeric" data-r="' + ei + ':' + si + '" value="' + (s.r || '') + '" placeholder="' + (rr || 'reps') + '">' +
         '<button class="ck" data-ck="' + ei + ':' + si + '" aria-label="Complete set">' + icon('check') + '</button></div></div>';
     });
@@ -645,6 +657,7 @@ function exStats(e, ex) {
   if (best > allTimeBest(ex.id) + 1e-6 && a) out += '<span class="badge pr">PR</span>';
   else if (a && best > lastBest(ex.id) + 1e-6) out += '<span class="badge cy">Beat last</span>';
   if (rough) out += '<span class="dim">est. rough (&gt;12 reps)</span>';
+  if (topOfRange(done, entryTarget(e))) out += '<span class="badge pr">Top of range</span><span class="gr">Add weight next workout</span>';
   return out;
 }
 function liveXp() {
@@ -884,15 +897,25 @@ function viewRoutines() {
       '<div class="row"><span class="small dim grow">' + (last ? 'Last ' + C.fmtDate(last) : 'Never performed') + '</span><button class="btn ghost sm" data-edit-routine="' + esc(r.id) + '">Edit</button><button class="btn primary sm" data-start-routine="' + esc(r.id) + '">Start</button></div></div>';
   }).join('');
   return '<div class="top"><h1>Routines</h1><button class="btn primary sm" id="new-routine">' + icon('plus') + ' New</button></div>' + (cards || '<div class="empty">No routines yet.<br><span class="small">Build one, or add a program below.</span></div>') +
-    '<div class="kicker" style="margin:18px 4px 6px">Programs</div>' + C.PROGRAMS.map(p => '<div class="card"><div class="row"><div class="grow"><div style="font-weight:600">' + esc(p.name) + '</div><div class="small muted" style="margin-top:2px">' + esc(p.desc) + ' ' + p.routines.length + ' routines.</div></div><button class="btn ghost sm" data-program="' + esc(p.id) + '">Add</button></div></div>').join('');
+    '<div class="kicker" style="margin:18px 4px 6px">Programs</div>' + C.PROGRAMS.map(p => '<div class="card"><div class="row"><div class="grow"><div style="font-weight:600">' + esc(p.name) + '</div><div class="small muted" style="margin-top:2px">' + esc(p.desc) + ' ' + p.routines.length + ' routines.</div></div><button class="btn ghost sm" data-program="' + esc(p.id) + '">' + (p.routines.every(r => state.routines.some(x => x.name === r.name)) ? 'Update' : 'Add') + '</button></div></div>').join('');
 }
 function repsLabel(i) { return i.repsMax && i.repsMax > i.reps ? i.reps + '–' + i.repsMax : String(i.reps); }
 async function addProgram(id) {
   const p = C.PROGRAMS.find(x => x.id === id); if (!p) return;
   const existing = p.routines.filter(r => state.routines.some(x => x.name === r.name));
-  if (!(await confirmDlg('Add ' + p.name + '?', p.routines.map(r => r.name).join(', ') + ' will be added as routines you can edit.' + (existing.length ? ' You already have ' + existing.map(r => r.name).join(', ') + '; those will be added as copies.' : ''), 'Add ' + p.routines.length + ' routines'))) return;
-  for (const r of p.routines) state.routines.push({ id: uid(), name: r.name, items: r.items.map(([exId, sets, reps, repsMax, restSec]) => ({ exId, sets, reps, repsMax, restSec })) });
-  save(); toast(p.routines.length + ' routines added'); render();
+  const items = r => r.items.map(([exId, sets, reps, repsMax, restSec]) => ({ exId, sets, reps, repsMax, restSec }));
+  let mode = 'add';
+  if (existing.length) {
+    mode = await modal({ title: 'Update ' + p.name + '?', body: 'You already have ' + existing.map(r => r.name).join(', ') + '. Replace swaps in the latest exercises, sets, rep ranges and rest times and keeps your workout history. Anything you edited in those routines is overwritten.',
+      buttons: [{ label: 'Cancel', value: null }, { label: 'Add copies', value: 'add' }, { label: 'Replace', value: 'replace', primary: true }] });
+    if (!mode) return;
+  } else if (!(await confirmDlg('Add ' + p.name + '?', p.routines.map(r => r.name).join(', ') + ' will be added as routines you can edit.', 'Add ' + p.routines.length + ' routines'))) return;
+  let replaced = 0;
+  for (const r of p.routines) {
+    const cur = mode === 'replace' && state.routines.find(x => x.name === r.name);
+    if (cur) { cur.items = items(r); replaced++; } else state.routines.push({ id: uid(), name: r.name, items: items(r) });
+  }
+  save(); toast(replaced ? replaced + ' routines updated' : p.routines.length + ' routines added'); render();
 }
 let draft = null;
 function viewRoutineEdit() {
@@ -1220,6 +1243,11 @@ function bindWorkoutDelegates() {
         const [ei, si] = del.dataset.del.split(':').map(Number);
         if (await confirmDlg('Delete set?', 'Set ' + (si + 1) + ' will be removed.', 'Delete', true)) { state.active.entries[ei].sets.splice(si, 1); save(); render(); } else render();
         return;
+      }
+      const bp = e.target.closest('[data-bump]'); if (bp) {
+        const en = state.active.entries[+bp.dataset.bump];
+        for (const s of en.sets) if (!s.done && !s.warmup) { s.w = en.bump.to; s.r = 0; }
+        en.bumped = true; save(); render(); toast('Loaded ' + fw(en.bump.to) + ' ' + wHead(exById[en.exId]) + '. Expect a few fewer reps.'); return;
       }
       const ad = e.target.closest('[data-addset]'); if (ad) {
         const en = state.active.entries[+ad.dataset.addset]; const last = en.sets[en.sets.length - 1];

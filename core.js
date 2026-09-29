@@ -55,6 +55,7 @@
     { id: 'mc_leg_ext',    name: 'Leg Extension',           cat: 'squat', equip: 'Machine', muscle: 'Quads',      group: 'legs' },
     { id: 'mc_leg_curl',   name: 'Leg Curl',                cat: 'hinge', equip: 'Machine', muscle: 'Hamstrings', group: 'legs' },
     { id: 'mc_calf',       name: 'Calf Raise',              cat: 'squat', equip: 'Machine', muscle: 'Calves',     group: 'legs' },
+    { id: 'mc_seated_calf',name: 'Seated Calf Raise',       cat: 'squat', equip: 'Machine', muscle: 'Calves',     group: 'legs' },
     { id: 'mc_chest_press',name: 'Machine Chest Press',     cat: 'push',  equip: 'Machine', muscle: 'Chest',      group: 'chest' },
     { id: 'mc_pec_deck',   name: 'Pec Deck',                cat: 'push',  equip: 'Machine', muscle: 'Chest',      group: 'chest' },
     { id: 'mc_cable_fly',  name: 'Cable Fly',               cat: 'push',  equip: 'Cable',   muscle: 'Chest',      group: 'chest', perSide: true },
@@ -75,23 +76,26 @@
 
   // ---------- Built-in programs (one tap creates the routines) ----------
   // item: [exId, sets, repsMin, repsMax, restSec]
+  // Rest: heavy compounds 150–180 s, moderate compounds 90–120 s, isolation 60–75 s.
   const PROGRAMS = [
-    { id: 'pplp', name: 'Push / Pull / Legs / Pretty', desc: '4-day recomposition program with an aesthetic day for delts, arms, upper chest and abs.',
+    { id: 'pplp', version: 2, name: 'Push / Pull / Legs / Pretty',
+      desc: '4-day recomposition program. Stay in the rep range with 1–2 reps in reserve; when every working set hits the top of the range, add weight next workout.',
       routines: [
         { name: 'Push', items: [
-          ['bb_bench', 3, 5, 8, 150], ['db_incline', 3, 8, 12, 120], ['db_shoulder', 3, 8, 12, 120], ['mc_cable_lateral', 3, 12, 20, 60],
-          ['mc_cable_fly', 2, 10, 15, 60], ['mc_pushdown', 3, 10, 15, 60], ['mc_oh_tri_ext', 2, 10, 15, 60] ] },
+          ['bb_bench', 3, 5, 8, 150], ['mc_cable_lateral', 3, 12, 20, 60], ['db_incline', 3, 8, 12, 120],
+          ['mc_cable_fly', 2, 10, 15, 75], ['mc_pushdown', 3, 10, 15, 60], ['mc_oh_tri_ext', 2, 10, 15, 60] ] },
         { name: 'Pull', items: [
-          ['bw_pullup', 3, 6, 10, 150], ['mc_cs_row', 3, 8, 12, 120], ['mc_one_arm_pulldown', 2, 10, 15, 90], ['mc_rear_delt', 3, 12, 20, 60],
-          ['mc_preacher', 3, 8, 12, 90], ['mc_bayesian_curl', 3, 10, 15, 60], ['db_hammer', 2, 10, 15, 60] ] },
+          ['bw_pullup', 3, 6, 10, 150], ['mc_cs_row', 3, 8, 12, 120], ['mc_preacher', 3, 8, 12, 75], ['mc_rear_delt', 3, 12, 20, 60],
+          ['mc_one_arm_pulldown', 2, 10, 15, 90], ['mc_bayesian_curl', 3, 10, 15, 60], ['db_hammer', 2, 10, 15, 60] ] },
         { name: 'Legs', items: [
-          ['bb_squat', 3, 5, 8, 180], ['bb_rdl', 3, 8, 10, 150], ['mc_leg_press', 3, 10, 15, 120], ['mc_leg_curl', 3, 10, 15, 90],
-          ['mc_leg_ext', 2, 12, 15, 60], ['mc_calf', 4, 10, 15, 60], ['mc_cable_crunch', 3, 10, 15, 60], ['bw_hlr', 2, 10, 15, 60] ] },
+          ['bb_squat', 3, 5, 8, 180], ['bb_rdl', 3, 8, 10, 150], ['mc_seated_calf', 4, 10, 15, 60], ['mc_leg_press', 3, 10, 15, 120],
+          ['mc_leg_curl', 3, 10, 15, 75], ['mc_leg_ext', 2, 12, 15, 60], ['mc_cable_crunch', 3, 10, 15, 60], ['bw_hlr', 2, 10, 15, 60] ] },
         { name: 'Pretty', items: [
-          ['mc_incline_machine', 3, 8, 12, 120], ['mc_cable_lateral', 4, 12, 20, 60], ['mc_rear_delt', 3, 15, 20, 60], ['db_incline_curl', 2, 8, 12, 90],
-          ['mc_cable_curl', 2, 10, 15, 60], ['mc_oh_tri_ext', 3, 10, 15, 60], ['mc_pushdown', 2, 10, 15, 60], ['mc_cable_crunch', 3, 10, 15, 60], ['bw_hlr', 2, 10, 15, 60] ] },
+          ['db_shoulder', 3, 8, 12, 120], ['mc_cable_lateral', 4, 12, 20, 60], ['db_incline_curl', 2, 8, 12, 75], ['mc_rear_delt', 3, 15, 20, 60],
+          ['mc_oh_tri_ext', 3, 10, 15, 60], ['mc_cable_curl', 2, 10, 15, 60], ['mc_pushdown', 2, 10, 15, 60], ['mc_cable_crunch', 3, 10, 15, 60], ['bw_hlr', 2, 10, 15, 60] ] },
       ] },
   ];
+
 
   const GROUPS = ['chest', 'back', 'shoulders', 'legs', 'glutes', 'arms', 'core'];
   const LOWER_CATS = { squat: 1, hinge: 1 };
