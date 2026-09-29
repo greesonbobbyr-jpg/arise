@@ -236,6 +236,38 @@ console.log('\nDaily quest');
   eq('same key all day', C.dailyQuest(an, exById, stSafe, base + 45 * DAY + 3600e3 * 3).key, q.key);
 }
 
+console.log('\nWeight convention (total / per dumbbell / per side)');
+{
+  const dbb = exById.db_bench, fly = exById.mc_cable_fly, gob = exById.db_goblet, bss = exById.db_bss;
+  eq('db bench entered per dumbbell', C.loadMode(dbb), 'db');
+  eq('cable fly entered per side', C.loadMode(fly), 'side');
+  eq('goblet squat (one dumbbell) is total', C.loadMode(gob), 'total');
+  eq('barbell bench is total', C.loadMode(bench), 'total');
+  eq('pull-up is added weight', C.loadMode(pullup), 'bw');
+  // e1RM stays in the entered unit so progress compares like with like
+  eq('60 lb dumbbells × 8 → e1RM 76 per dumbbell', Math.round(C.setE1RM(dbb, { w: 60, r: 8 }, 180)), 76);
+  // volume counts both hands / both sides
+  const sess = { entries: [{ exId: 'db_bench', sets: [{ w: 60, r: 10 }] }, { exId: 'mc_cable_fly', sets: [{ w: 20, r: 12 }] }, { exId: 'bb_bench', sets: [{ w: 135, r: 5 }] }] };
+  eq('volume: 2×60×10 + 2×20×12 + 135×5 = 2355', C.sessionVolume(sess, exById, 180), 2355);
+  // strength standards compare the pair: 80 lb dumbbells ×5 → 93.3 each → 186.7 both / 180 bw = 1.04 → just past intermediate (1.00)
+  eq('stdMult doubles dumbbell pairs', C.stdMult(dbb), 2);
+  eq('stdMult leaves per-side cables alone (no standard)', C.stdMult(fly), 1);
+  const ratio = C.setE1RM(dbb, { w: 80, r: 5 }, 180) * C.stdMult(dbb) / 180;
+  eq('80s × 5 is Intermediate on dumbbell bench', C.percentile(ratio, 'm', 30, 'db_bench').tierName, 'Intermediate');
+  // rank targets come back in the entered unit (per dumbbell)
+  const n = C.rankNext([{ exId: 'db_bench', name: 'Dumbbell Bench Press', current: 70, tier: 1, std: 'db_bench', mult: 2, words: ' per dumbbell' }], 180, 'm', 30);
+  eq('rank target for db bench is per dumbbell (1.00×180/2 = 90)', n.target, 90);
+  eq('rank text says per dumbbell', /90 e1RM per dumbbell/.test(n.text), true);
+  // stall prescriptions: +5 per dumbbell even on lower-body dumbbell lifts, and say so
+  const now = Date.UTC(2026, 5, 1) + 45 * DAY;
+  const sessions = [0, 10, 20, 30, 40].map(d => S(d, 'db_bss', [[40, 10], [40, 10], [40, 10]]));
+  const a = C.analyze('db_bss', sessions, bss, 180, now);
+  eq('split squat stalled at top of range → +5 per dumbbell (45)', a.stall && a.stall.weight, 45);
+  eq('stall text names the unit', /45 lb per dumbbell/.test(a.stall.text), true);
+  const sq = [0, 10, 20, 30, 40].map(d => S(d, 'bb_squat', [[225, 8], [225, 8], [225, 8]]));
+  eq('barbell squat still +10 total', C.analyze('bb_squat', sq, squat, 180, now).stall.weight, 235);
+}
+
 console.log('\nLibrary and programs');
 {
   const ids = new Set(C.EX.map(e => e.id));

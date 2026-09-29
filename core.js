@@ -57,20 +57,20 @@
     { id: 'mc_calf',       name: 'Calf Raise',              cat: 'squat', equip: 'Machine', muscle: 'Calves',     group: 'legs' },
     { id: 'mc_chest_press',name: 'Machine Chest Press',     cat: 'push',  equip: 'Machine', muscle: 'Chest',      group: 'chest' },
     { id: 'mc_pec_deck',   name: 'Pec Deck',                cat: 'push',  equip: 'Machine', muscle: 'Chest',      group: 'chest' },
-    { id: 'mc_cable_fly',  name: 'Cable Fly',               cat: 'push',  equip: 'Cable',   muscle: 'Chest',      group: 'chest' },
+    { id: 'mc_cable_fly',  name: 'Cable Fly',               cat: 'push',  equip: 'Cable',   muscle: 'Chest',      group: 'chest', perSide: true },
     { id: 'mc_face_pull',  name: 'Face Pull',               cat: 'pull',  equip: 'Cable',   muscle: 'Rear delts', group: 'shoulders' },
     { id: 'mc_pushdown',   name: 'Tricep Pushdown',         cat: 'arms',  equip: 'Cable',   muscle: 'Triceps',    group: 'arms' },
     { id: 'mc_cable_curl', name: 'Cable Curl',              cat: 'arms',  equip: 'Cable',   muscle: 'Biceps',     group: 'arms' },
     { id: 'mc_cable_crunch',name:'Cable Crunch',            cat: 'core',  equip: 'Cable',   muscle: 'Abs',        group: 'core' },
     { id: 'mc_oh_tri_ext',  name: 'Overhead Cable Triceps Extension', cat: 'arms', equip: 'Cable', muscle: 'Triceps', group: 'arms' },
     { id: 'mc_cs_row',      name: 'Chest-Supported Row',    cat: 'pull',  equip: 'Machine', muscle: 'Upper back', group: 'back' },
-    { id: 'mc_one_arm_pulldown', name: 'One-Arm Cable Pulldown', cat: 'pull', equip: 'Cable', muscle: 'Lats',   group: 'back' },
+    { id: 'mc_one_arm_pulldown', name: 'One-Arm Cable Pulldown', cat: 'pull', equip: 'Cable', muscle: 'Lats',   group: 'back', perSide: true },
     { id: 'mc_rear_delt',   name: 'Reverse Pec Deck',       cat: 'pull',  equip: 'Machine', muscle: 'Rear delts', group: 'shoulders' },
     { id: 'mc_preacher',    name: 'Preacher Curl',          cat: 'arms',  equip: 'Machine', muscle: 'Biceps',     group: 'arms' },
-    { id: 'mc_bayesian_curl', name: 'Bayesian Cable Curl',  cat: 'arms',  equip: 'Cable',   muscle: 'Biceps',     group: 'arms' },
+    { id: 'mc_bayesian_curl', name: 'Bayesian Cable Curl',  cat: 'arms',  equip: 'Cable',   muscle: 'Biceps',     group: 'arms', perSide: true },
     { id: 'mc_incline_machine', name: 'Incline Machine Press', cat: 'push', equip: 'Machine', muscle: 'Upper chest', group: 'chest' },
     { id: 'db_incline_curl',name: 'Incline Dumbbell Curl',  cat: 'arms',  equip: 'Dumbbell', muscle: 'Biceps',    group: 'arms',      perHand: true },
-    { id: 'mc_cable_lateral', name: 'Cable Lateral Raise',  cat: 'push',  equip: 'Cable',   muscle: 'Side delts', group: 'shoulders' },
+    { id: 'mc_cable_lateral', name: 'Cable Lateral Raise',  cat: 'push',  equip: 'Cable',   muscle: 'Side delts', group: 'shoulders', perSide: true },
   ];
 
   // ---------- Built-in programs (one tap creates the routines) ----------
@@ -134,7 +134,24 @@
   }
   function isRough(r) { return (+r || 0) > 12; }
   function round5(x) { return Math.round(x / 5) * 5; }
-  // total load for a set (bodyweight exercises fold bodyweight in)
+  // ---------- How weight is entered for an exercise ----------
+  // 'db'   = per dumbbell (the number printed on one dumbbell)       — ex.perHand
+  // 'side' = per side / per handle (single-arm or dual-stack cable)   — ex.perSide
+  // 'bw'   = added weight on top of bodyweight                         — ex.bw
+  // 'total'= everything else (barbell, machine stack, one dumbbell held in both hands)
+  // e1RM, PREVIOUS, shadow and progress % all stay in the entered unit, so they compare like with like.
+  // Anything that needs the whole load (volume, strength standards) multiplies by loadMult / stdMult.
+  function loadMode(ex) { return !ex ? 'total' : ex.perHand ? 'db' : ex.perSide ? 'side' : ex.bw ? 'bw' : 'total'; }
+  function loadMult(ex) { const m = loadMode(ex); return m === 'db' || m === 'side' ? 2 : 1; }   // both hands / both sides worked
+  function stdMult(ex) { return loadMode(ex) === 'db' ? 2 : 1; }                                 // dumbbell standards are for the pair
+  const LOAD_WORDS = { db: ' per dumbbell', side: ' per side', bw: ' added', total: '' };
+  const LOAD_TAG = { db: '/DB', side: '/side', bw: '', total: '' };
+  function loadWords(ex) { return LOAD_WORDS[loadMode(ex)]; }
+  function loadTag(ex) { return LOAD_TAG[loadMode(ex)]; }
+  // weight step for suggestions: dumbbells/handles move in 5s per hand; barbell lower body in 10s
+  function loadStep(ex) { const m = loadMode(ex); if (m === 'db' || m === 'side') return 5; return ex && LOWER_CATS[ex.cat] ? 10 : 5; }
+
+  // load for one entered set, in the entered unit (bodyweight exercises fold bodyweight in)
   function setLoad(ex, set, bodyweight) {
     const added = +set.w || 0;
     if (ex && ex.bw) return (+bodyweight || 0) * ex.bw + added;
@@ -203,9 +220,9 @@
     const sessionsSinceBest = h.length - 1 - bestIdx;
     const daysSinceBest = (now - h[bestIdx].date) / DAY;
     if (!(daysSinceBest >= 28 && sessionsSinceBest >= 3)) return null;
-    const n = h.length, latest = h[n - 1], lower = !!(ex && LOWER_CATS[ex.cat]);
-    const inc = lower ? 10 : 5;
-    const unit = 'lb';
+    const n = h.length, latest = h[n - 1];
+    const inc = loadStep(ex);
+    const unit = 'lb' + loadWords(ex);
     // 1. trending down → fatigue
     if (latest.best < 0.98 * h[n - 4].best) {
       const w = round5(latest.top.w * 0.9);
@@ -392,18 +409,19 @@
     if (max >= 2) return 'C';
     return 'D';
   }
-  // lifts: [{exId, name, current, tier, std}] ; returns the closest concrete target for the next rank
+  // lifts: [{exId, name, current, tier, std, mult?, words?}] ; current is in the entered unit, mult converts it to the
+  // unit the standards use (2 for per-dumbbell lifts). Returns the closest concrete target for the next rank, in the entered unit.
   function rankNext(lifts, bodyweight, sex, age) {
     const rank = rankFor(lifts.map(l => l.tier));
     const mult = ageMult(age), s = sex === 'f' ? 'f' : 'm';
-    const need = (l, tierIdx) => STD[l.std][s][tierIdx] * bodyweight / mult;
+    const need = (l, tierIdx) => STD[l.std][s][tierIdx] * bodyweight / mult / (l.mult || 1);
     const closest = (tierIdx, filter) => {
       let best = null;
       for (const l of lifts) {
         if (!STD[l.std] || (filter && !filter(l))) continue;
         const target = need(l, tierIdx); if (target <= l.current) continue;
         const gap = (target - l.current) / l.current;
-        if (!best || gap < best.gap) best = { exId: l.exId, name: l.name, target: round5(target), gap, tierIdx };
+        if (!best || gap < best.gap) best = { exId: l.exId, name: l.name, target: round5(target), gap, tierIdx, words: l.words || '' };
       }
       return best;
     };
@@ -417,7 +435,7 @@
     const nx = RANK_ORDER[RANK_ORDER.indexOf(rank) + 1];
     if (!c) return { rank, next: nx, text: 'Next rank ' + nx + ': ' + RANK_RULES[nx] + '.' };
     return { rank, next: nx, exId: c.exId, target: c.target, tier: TIERS[c.tierIdx],
-      text: 'Rank ' + nx + ' when ' + c.name + ' hits ' + c.target + ' e1RM (' + TIERS[c.tierIdx] + ').' };
+      text: 'Rank ' + nx + ' when ' + c.name + ' hits ' + c.target + ' e1RM' + c.words + ' (' + TIERS[c.tierIdx] + ').' };
   }
 
   // ---------- Daily quest ----------
@@ -435,15 +453,15 @@
     if (near.length) {
       const a = near[dayIdx % near.length], ex = exById[a.exId];
       let bestTop = null; for (const h of a.history) if (Math.abs(h.best - a.allTimeBest) < 1e-6) { bestTop = h.top; break; }
-      const inc = LOWER_CATS[ex.cat] ? 10 : 5, w = round5(bestTop.w + inc);
+      const w = round5(bestTop.w + loadStep(ex));
       return { key: 'pr-' + dayIdx, kind: 'pr', exId: a.exId, target: w, reps: bestTop.r, title: 'Clear the shadow',
-        text: ex.name + ': ' + w + ' × ' + bestTop.r + ' beats your best (' + Math.round(a.allTimeBest) + ' e1RM).', xp };
+        text: ex.name + ': ' + w + ' lb' + loadWords(ex) + ' × ' + bestTop.r + ' beats your best (' + Math.round(a.allTimeBest) + ' e1RM).', xp };
     }
     const stalled = all.filter(a => a.stall && a.stall.weight && a.stall.code !== 'fatigue');
     if (stalled.length) {
       const a = stalled[dayIdx % stalled.length], ex = exById[a.exId];
       return { key: 'stall-' + dayIdx, kind: 'stall', exId: a.exId, target: a.stall.weight, title: 'Break the stall',
-        text: ex.name + ': ' + a.stall.title.toLowerCase() + '. Load ' + a.stall.weight + ' today.', xp };
+        text: ex.name + ': ' + a.stall.title.toLowerCase() + '. Load ' + a.stall.weight + ' lb' + loadWords(ex) + ' today.', xp };
     }
     return { key: 'log-' + dayIdx, kind: 'log', title: 'Show up', text: 'Log a workout today.', xp };
   }
@@ -478,11 +496,13 @@
     { id: 'vol10k',    name: 'Tonnage',         desc: '10,000 lb in one workout',             check: c => c.maxVolume >= 10000 },
   ];
 
+  // total weight moved: per-dumbbell and per-side sets count both hands / both sides
   function sessionVolume(s, exById, bodyweight) {
     let v = 0;
     for (const e of s.entries || []) for (const st of e.sets || []) {
       if (st.warmup) continue;
-      v += setLoad(exById[e.exId], st, bodyweight) * (+st.r || 0);
+      const ex = exById[e.exId];
+      v += setLoad(ex, st, bodyweight) * loadMult(ex) * (+st.r || 0);
     }
     return v;
   }
@@ -492,5 +512,6 @@
     epley, isRough, round5, setLoad, setE1RM, history, analyze, stall, percentile, ageMult, ordinal,
     readout, median, XP, RANKS, xpForLevel, levelFromXp, startOfWeek, streak, ACHIEVEMENTS, sessionVolume, fmtDate,
     RANK_ORDER, RANK_RULES, rankFor, rankNext, dailyQuest, questDone, monthKey,
+    loadMode, loadMult, stdMult, loadWords, loadTag, loadStep,
   };
 })(typeof module !== 'undefined' && module.exports ? module.exports : window);

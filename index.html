@@ -112,6 +112,9 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 /* workout set table */
 .exh{display:flex;align-items:center;gap:8px;margin:0 0 6px;min-height:44px}
 .exh h2{flex:1;min-width:0;font-size:17px}
+.exsub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:-4px 0 8px;padding:0 2px;font-size:var(--fs-s);color:var(--tx2)}
+.exsub .tgt{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:6px;background:var(--cy-tint);color:var(--cy);font-family:var(--f-num);font-weight:600;font-size:12px}
+.exsub .ld{color:var(--tx3)}
 .thead,.set{display:grid;grid-template-columns:44px 1fr 1fr 1fr 48px;gap:6px;align-items:center}
 .thead{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);font-weight:600;text-align:center;padding:2px 0 6px}
 .thead>:first-child{text-align:left;padding-left:8px}
@@ -303,7 +306,7 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
@@ -351,6 +354,11 @@ function fw(lb, dec) { // display weight
 function toLb(v) { v = +v || 0; return P().units === 'kg' ? v / KG : v; }
 function fromLb(lb) { return P().units === 'kg' ? +(lb * KG).toFixed(1) : +(+lb).toFixed(1).replace(/\.0$/, ''); }
 const U = () => P().units;
+// how weight is entered for this exercise, as shown to the user
+function wHead(ex) { const m = C.loadMode(ex); return m === 'bw' ? '+' + U() : m === 'db' ? U() + '/DB' : m === 'side' ? U() + '/side' : U(); }
+function wHint(ex) { const m = C.loadMode(ex); return m === 'db' ? 'Weight per dumbbell' : m === 'side' ? 'Weight per side' : m === 'bw' ? 'Added weight · 0 = bodyweight' : ''; }
+function wTag(ex) { const t = C.loadTag(ex); return t ? ' ' + t : ''; }
+function repRange(t) { return t && t.reps ? (t.repsMax && t.repsMax > t.reps ? t.reps + '–' + t.repsMax : String(t.reps)) : ''; }
 function fmtSet(ex, s) {
   if (!s) return '—';
   if (ex && ex.bw) return (+s.w ? '+' + fw(s.w) : 'BW') + ' × ' + s.r;
@@ -383,12 +391,12 @@ function allTimeBest(exId) { const a = analyses()[exId]; return a ? a.allTimeBes
 function lastBest(exId) { const a = analyses()[exId]; return a ? a.history[a.history.length - 1].best : 0; }
 function tierInfo(ex, e1rm) {
   if (!ex.std || !BW() || !e1rm) return null;
-  return C.percentile(e1rm / BW(), P().sex, P().age, ex.std);
+  return C.percentile(e1rm * C.stdMult(ex) / BW(), P().sex, P().age, ex.std);
 }
 // lifts with a formed baseline and a standards table, with their current tier
 function strengthLifts() {
   const out = [], an = analyses();
-  for (const id in an) { const a = an[id], ex = exById[id]; if (!ex || !ex.std || !a.formed) continue; const t = tierInfo(ex, a.current); if (t) out.push({ exId: id, name: ex.name, current: a.current, tier: t.tier, std: ex.std }); }
+  for (const id in an) { const a = an[id], ex = exById[id]; if (!ex || !ex.std || !a.formed) continue; const t = tierInfo(ex, a.current); if (t) out.push({ exId: id, name: ex.name, current: a.current, tier: t.tier, std: ex.std, mult: C.stdMult(ex), words: C.loadWords(ex) }); }
   return out;
 }
 function currentRank() { return C.rankFor(strengthLifts().map(l => l.tier)); }
@@ -534,7 +542,7 @@ function sessionDetail(s) {
   let html = '<div class="detail">';
   for (const e of s.entries) {
     const ex = exById[e.exId] || { name: '?' }; let wn = 0;
-    html += '<div class="exn">' + esc(ex.name) + (prIds.has(e.exId) ? ' <span class="badge pr">PR</span>' : '') + '</div>';
+    html += '<div class="exn">' + esc(ex.name) + (wHint(ex) && C.loadMode(ex) !== 'bw' ? ' <span class="dim" style="font-weight:400">· ' + wHint(ex).toLowerCase().replace('weight ', '') + '</span>' : '') + (prIds.has(e.exId) ? ' <span class="badge pr">PR</span>' : '') + '</div>';
     for (const st of e.sets) html += '<div class="srow"><span class="' + (st.warmup ? 'w' : 'dim') + '">' + (st.warmup ? 'W' : ++wn) + '</span><span class="mono">' + fmtSet(ex, st) + '</span><span class="mono dim">' + (st.warmup ? '' : fw(C.setE1RM(ex, st, BW())) + ' e1RM') + '</span><span></span></div>';
   }
   html += '<div class="row" style="margin-top:12px"><span class="small dim grow">Volume ' + fw(C.sessionVolume(s, exById, BW())) + ' ' + U() + '</span><button class="btn danger sm" data-delsess="' + esc(s.id) + '">Delete</button></div></div>';
@@ -553,20 +561,31 @@ function lastPerformed(rid) { let m = 0; for (const s of state.sessions) if (s.r
 function startWorkout(routine) {
   const a = { id: uid(), startedAt: Date.now(), name: routine ? routine.name : defaultName(), routineId: routine ? routine.id : null, entries: [], rest: null };
   state.active = a;
-  if (routine) for (const it of routine.items) addExerciseToActive(it.exId, it.sets, it.reps, it.restSec);
+  if (routine) for (const it of routine.items) addExerciseToActive(it.exId, it.sets, it.reps, it.restSec, it.repsMax);
   save(); tab = 'workout'; sub = null; render(); requestWake();
 }
 function defaultName() { const h = new Date().getHours(); return (h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening') + ' workout'; }
-function addExerciseToActive(exId, nSets, reps, restSec) {
+function addExerciseToActive(exId, nSets, reps, restSec, repsMax) {
   const ex = exById[exId]; if (!ex) return;
   const prev = prevEntry(exId);
   const n = nSets || (prev ? prev.sets.length : 3);
+  const ranged = repsMax && repsMax > reps;
   const sets = [];
   for (let i = 0; i < n; i++) {
     const p = prev && prev.sets[i];
-    sets.push({ w: p ? p.w : 0, r: p ? p.r : (reps || 0), warmup: !!(p && p.warmup), done: false });
+    // with a range and no history, leave reps blank so the range shows as the placeholder instead of looking like a fixed target
+    sets.push({ w: p ? p.w : 0, r: p ? p.r : (ranged ? 0 : (reps || 0)), warmup: !!(p && p.warmup), done: false });
   }
-  state.active.entries.push({ exId, sets, rest: restSec || state.exRest[exId] || P().defaultRest });
+  const entry = { exId, sets, rest: restSec || state.exRest[exId] || P().defaultRest };
+  if (reps) entry.target = { sets: n, reps, repsMax: ranged ? repsMax : undefined };
+  state.active.entries.push(entry);
+}
+// a workout started before targets were stored: recover them from its routine
+function entryTarget(e) {
+  if (e.target) return e.target;
+  const r = state.active && state.active.routineId && state.routines.find(x => x.id === state.active.routineId);
+  const it = r && r.items.find(i => i.exId === e.exId);
+  return it ? { sets: it.sets, reps: it.reps, repsMax: it.repsMax } : null;
 }
 function viewActive() {
   const a = state.active;
@@ -576,8 +595,11 @@ function viewActive() {
   a.entries.forEach((e, ei) => {
     const ex = exById[e.exId] || { name: 'Unknown', id: e.exId };
     const prev = prevEntry(e.exId);
-    html += '<div class="exblock" data-e="' + ei + '"><div class="exh"><h2>' + esc(ex.name) + '</h2><span class="small dim mono">' + fmtTime(e.rest) + '</span><button class="icon-btn" data-exmenu="' + ei + '">' + icon('more') + '</button></div>' + shadowLine(e, ex);
-    html += '<div class="thead"><span>Set</span><span>Previous</span><span>' + U() + '</span><span>Reps</span><span></span></div>';
+    const tgt = entryTarget(e), rr = repRange(tgt), hint = wHint(ex);
+    html += '<div class="exblock" data-e="' + ei + '"><div class="exh"><h2>' + esc(ex.name) + '</h2><span class="small dim mono">' + fmtTime(e.rest) + '</span><button class="icon-btn" data-exmenu="' + ei + '">' + icon('more') + '</button></div>';
+    if (rr || hint) html += '<div class="exsub">' + (rr ? '<span class="tgt">' + tgt.sets + ' × ' + rr + ' reps</span>' : '') + (hint ? '<span class="ld">' + hint + '</span>' : '') + '</div>';
+    html += shadowLine(e, ex);
+    html += '<div class="thead"><span>Set</span><span>Previous</span><span>' + wHead(ex) + '</span><span>Reps</span><span></span></div>';
     let wn = 0;
     e.sets.forEach((s, si) => {
       const p = prev && prev.sets[si];
@@ -585,8 +607,8 @@ function viewActive() {
       html += '<div class="set-wrap"><div class="set-del" data-del="' + ei + ':' + si + '">Delete</div><div class="set' + (s.done ? ' done' : '') + '" data-s="' + si + '">' +
         '<button class="n' + (s.warmup ? ' w' : '') + '" data-warm="' + ei + ':' + si + '">' + label + '</button>' +
         '<button class="prev" data-prev="' + ei + ':' + si + '">' + (p ? fmtSet(ex, p) : '—') + '</button>' +
-        '<input class="in num" type="number" inputmode="decimal" step="any" data-w="' + ei + ':' + si + '" value="' + (s.w ? fromLb(s.w) : (ex.bw ? '0' : '')) + '" placeholder="' + (ex.bw ? '+' + U() : U()) + '">' +
-        '<input class="in num" type="number" inputmode="numeric" data-r="' + ei + ':' + si + '" value="' + (s.r || '') + '" placeholder="reps">' +
+        '<input class="in num" type="number" inputmode="decimal" step="any" data-w="' + ei + ':' + si + '" value="' + (s.w ? fromLb(s.w) : (ex.bw ? '0' : '')) + '" placeholder="' + wHead(ex) + '">' +
+        '<input class="in num" type="number" inputmode="numeric" data-r="' + ei + ':' + si + '" value="' + (s.r || '') + '" placeholder="' + (rr || 'reps') + '">' +
         '<button class="ck" data-ck="' + ei + ':' + si + '" aria-label="Complete set">' + icon('check') + '</button></div></div>';
     });
     html += '<button class="addset" data-addset="' + ei + '">+ Add set</button>';
@@ -599,7 +621,7 @@ function viewActive() {
 function shadowTop(exId) { const a = analyses()[exId]; if (!a) return null; for (const h of a.history) if (Math.abs(h.best - a.allTimeBest) < 1e-6) return { top: h.top, best: a.allTimeBest }; return null; }
 function shadowLine(e, ex) {
   const sh = shadowTop(e.exId); if (!sh) return '';
-  return '<div class="shadow" id="shadow-' + state.active.entries.indexOf(e) + '"><span class="k">Shadow</span><span class="mono">' + fmtSet(ex, sh.top) + '</span><span class="dim">·</span><span class="mono">' + fw(sh.best) + ' e1RM</span></div>';
+  return '<div class="shadow" id="shadow-' + state.active.entries.indexOf(e) + '"><span class="k">Shadow</span><span class="mono">' + fmtSet(ex, sh.top) + '</span><span class="dim">·</span><span class="mono">' + fw(sh.best) + ' e1RM' + wTag(ex) + '</span></div>';
 }
 function refreshBeating(ei) {
   const e = state.active.entries[ei], ex = exById[e.exId], sh = shadowTop(e.exId); if (!sh) return;
@@ -617,7 +639,7 @@ function exStats(e, ex) {
   let best = 0, rough = false;
   for (const s of done) { const v = C.setE1RM(ex, s, BW()); if (v > best) best = v; if (C.isRough(s.r)) rough = true; }
   const a = analyses()[ex.id];
-  let out = '<span>e1RM <b class="num cy">' + fw(best) + '</b></span>';
+  let out = '<span>e1RM <b class="num cy">' + fw(best) + '</b>' + wTag(ex) + '</span>';
   if (a && a.formed) { const ch = (best / a.baseline - 1) * 100; out += '<span class="' + (ch >= 0 ? 'gr' : 'rd') + ' num">' + pct(ch) + ' vs baseline</span>'; }
   else if (a) out += '<span class="dim">baseline forming</span>';
   if (best > allTimeBest(ex.id) + 1e-6 && a) out += '<span class="badge pr">PR</span>';
@@ -657,7 +679,7 @@ function completeSet(ei, si) {
   let pr = false;
   if (!s.warmup && analyses()[ex.id] && C.setE1RM(ex, s, BW()) > allTimeBest(ex.id) + 1e-6) {
     pr = true;
-    if (!prToasted[ex.id]) { prToasted[ex.id] = 1; toast('NEW PR — ' + ex.name + ' ' + fw(C.setE1RM(ex, s, BW())) + ' ' + U() + ' e1RM', 'pr'); if (navigator.vibrate) navigator.vibrate([30, 40, 60]); }
+    if (!prToasted[ex.id]) { prToasted[ex.id] = 1; toast('NEW PR — ' + ex.name + ' ' + fw(C.setE1RM(ex, s, BW())) + ' ' + U() + C.loadWords(ex) + ' e1RM', 'pr'); if (navigator.vibrate) navigator.vibrate([30, 40, 60]); }
   }
   startRest(e.rest);
   save(); rerenderSet(ei, si, pr); refreshExStats(ei);
@@ -838,11 +860,14 @@ async function customExerciseDialog(cb) {
     '<label class="field"><span>Muscle group</span><select class="in" id="cx-group">' + C.GROUPS.map(g => '<option value="' + g + '">' + g[0].toUpperCase() + g.slice(1) + '</option>').join('') + '</select></label>' +
     '<label class="field"><span>Movement category</span><select class="in" id="cx-cat">' + cats.map(g => '<option value="' + g + '">' + C.CAT_NAMES[g] + '</option>').join('') + '</select></label>' +
     '<label class="field"><span>Equipment</span><select class="in" id="cx-equip"><option>Barbell</option><option>Dumbbell</option><option>Machine</option><option>Cable</option><option>Bodyweight</option><option>Other</option></select></label>' +
+    '<label class="field"><span>Weight is entered as</span><select class="in" id="cx-load"><option value="total">Total load (barbell, machine, one dumbbell)</option><option value="db">Per dumbbell (one in each hand)</option><option value="side">Per side (single-arm or two cable stacks)</option></select></label>' +
     '<label class="field"><span>Bodyweight factor (0 = none)</span><input class="in" id="cx-bw" type="number" inputmode="decimal" step="0.05" value="0"></label>',
-    buttons: [{ label: 'Cancel', value: null }, { label: 'Create', primary: true, onValue: m => ({ name: $('#cx-name', m).value.trim(), group: $('#cx-group', m).value, cat: $('#cx-cat', m).value, equip: $('#cx-equip', m).value, bw: +$('#cx-bw', m).value || 0 }) }] });
+    buttons: [{ label: 'Cancel', value: null }, { label: 'Create', primary: true, onValue: m => ({ name: $('#cx-name', m).value.trim(), group: $('#cx-group', m).value, cat: $('#cx-cat', m).value, equip: $('#cx-equip', m).value, load: $('#cx-load', m).value, bw: +$('#cx-bw', m).value || 0 }) }] });
   if (!v || !v.name) { cb(null); return; }
   const ex = { id: 'cx_' + uid(), name: v.name, cat: v.cat, equip: v.equip, muscle: v.group[0].toUpperCase() + v.group.slice(1), group: v.group, custom: true };
   if (v.bw > 0) ex.bw = Math.min(1.5, v.bw);
+  else if (v.load === 'db') ex.perHand = true;
+  else if (v.load === 'side') ex.perSide = true;
   state.custom.push(ex); buildEx(); invalidate(); save(); cb(ex.id);
 }
 
@@ -943,7 +968,7 @@ function liftChart(a) {
 let expandedLift = null;
 function liftTable(a, ex) {
   const rows = a.history.slice(-8).reverse().map(h => '<div class="trow"><span class="dim">' + C.fmtDate(h.date) + '</span><span class="mono">' + fmtSet(ex, h.top) + '</span><span class="mono cy">' + fw(h.best) + '</span></div>').join('');
-  return '<div class="more"><div class="trow h"><span>Session</span><span>Top set</span><span>e1RM</span></div>' + rows + '<div class="small dim" style="margin-top:8px">All-time best ' + fw(a.allTimeBest) + ' ' + U() + ' on ' + C.fmtDate(a.bestDate) + '</div></div>';
+  return '<div class="more"><div class="trow h"><span>Session</span><span>Top set</span><span>e1RM</span></div>' + rows + '<div class="small dim" style="margin-top:8px">All-time best ' + fw(a.allTimeBest) + ' ' + U() + C.loadWords(ex) + ' on ' + C.fmtDate(a.bestDate) + '</div></div>';
 }
 function tierBar(ex, a) {
   if (!ex.std) return '<div class="small dim" style="margin-top:10px">No published standard for this lift. Progress only.</div>';
@@ -955,7 +980,7 @@ function tierBar(ex, a) {
   }).join('');
   const labs = C.TIER_SHORT.map((t, i) => '<span class="' + (i === cur.tier ? 'on' : '') + '">' + t + '</span>').join('');
   return '<div class="tier"><div class="segs">' + segs + '</div><div class="labs">' + labs + '</div>' +
-    '<div class="small muted" style="margin-top:8px"><span class="mono">' + (a.current / BW()).toFixed(2) + '×</span> bodyweight · ' + cur.tierName + ' · ~' + C.ordinal(cur.pct) + ' percentile</div></div>';
+    '<div class="small muted" style="margin-top:8px"><span class="mono">' + (a.current * C.stdMult(ex) / BW()).toFixed(2) + '×</span> bodyweight' + (C.stdMult(ex) > 1 ? ' (both dumbbells)' : '') + ' · ' + cur.tierName + ' · ~' + C.ordinal(cur.pct) + ' percentile</div></div>';
 }
 // ---------- anatomical body map (traced muscle paths from MuscleMap, MIT — see THIRD_PARTY.md) ----------
 // which muscle buckets an exercise hits, from its primary muscle label (fallback: its picker group)
@@ -1011,7 +1036,7 @@ function viewProgress() {
     const ex = exById[a.exId]; if (!ex) continue;
     html += '<div class="card lift' + (expandedLift === a.exId ? ' open' : '') + '" data-lift="' + esc(a.exId) + '"><div class="row" style="align-items:flex-start"><div class="grow"><h2 style="font-size:17px">' + esc(ex.name) + '</h2><div class="small dim">' + a.sessions + ' sessions · last ' + C.fmtDate(a.lastDate) + ' · tap for detail</div></div>' +
       (a.stall ? '<span class="badge stall">Stalled</span>' : '') + '</div>' +
-      '<div class="row" style="align-items:baseline;gap:10px;margin:10px 0 4px"><span class="num bigval cy">' + fw(a.current) + '</span><span class="muted small">' + U() + ' e1RM' + (a.rough ? ' · rough' : '') + '</span><span class="grow"></span>' +
+      '<div class="row" style="align-items:baseline;gap:10px;margin:10px 0 4px"><span class="num bigval cy">' + fw(a.current) + '</span><span class="muted small">' + U() + ' e1RM' + C.loadWords(ex) + (a.rough ? ' · rough' : '') + '</span><span class="grow"></span>' +
       (a.formed ? '<span class="num ' + (a.change >= 0 ? 'gr' : 'rd') + '" style="font-size:var(--fs-l)">' + pct(a.change) + '</span>' : '<span class="badge dimb">Baseline forming</span>') + '</div>' +
       (a.formed ? '<div class="small dim">vs baseline ' + fw(a.baseline) + ' ' + U() + ' (first 14 days)</div>' : '<div class="small dim">' + a.sessions + '/3 sessions · ' + Math.min(14, Math.floor(a.spanDays)) + '/14 days</div>') +
       '<div style="margin-top:10px">' + liftChart(a) + '</div>' + tierBar(ex, a) +
@@ -1097,7 +1122,7 @@ function bindProfile() {
 async function rankCard() {
   const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
   const L = C.levelFromXp(state.game.xp), rank = currentRank(), st = C.streak(state.sessions, P().weeklyTarget);
-  const lifts = strengthLifts().sort((a, b) => b.current - a.current).slice(0, 3);
+  const lifts = strengthLifts().sort((a, b) => b.current * b.mult - a.current * a.mult).slice(0, 3);
   const mono = '"Geist Mono", ui-monospace, Menlo, Consolas, monospace', ui = '"Geist", system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   try { await Promise.all([document.fonts.load('700 200px ' + mono), document.fonts.load('600 40px ' + ui)]); } catch (e) {}
   g.fillStyle = '#0A0B0F'; g.fillRect(0, 0, W, H);
@@ -1112,7 +1137,7 @@ async function rankCard() {
   tile(100, 560, 'Level', L.level); tile(400, 560, 'Streak', st.weeks, 'wk'); tile(700, 560, 'Workouts', state.sessions.length);
   k('Top lifts · e1RM', 100, 780);
   if (!lifts.length) { g.fillStyle = '#9AA3B2'; g.font = '500 36px ' + ui; g.fillText('No formed baselines yet. Three sessions over 14 days unlock a lift.', 100, 830); }
-  lifts.forEach((l, i) => { const y = 830 + i * 110; g.fillStyle = '#F2F4F8'; g.font = '600 44px ' + ui; g.fillText(l.name, 100, y); g.fillStyle = '#9AA3B2'; g.font = '500 30px ' + ui; g.fillText(C.TIERS[l.tier], 100, y + 52); g.textAlign = 'right'; g.fillStyle = '#3EE6FF'; g.font = '700 56px ' + mono; g.fillText(fw(l.current) + ' ' + U(), W - 100, y); g.textAlign = 'left'; if (i < lifts.length - 1) { g.strokeStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.moveTo(100, y + 96); g.lineTo(W - 100, y + 96); g.stroke(); } });
+  lifts.forEach((l, i) => { const y = 830 + i * 110; g.fillStyle = '#F2F4F8'; g.font = '600 44px ' + ui; g.fillText(l.name, 100, y); g.fillStyle = '#9AA3B2'; g.font = '500 30px ' + ui; g.fillText(C.TIERS[l.tier] + (l.words ? ' ·' + l.words : ''), 100, y + 52); g.textAlign = 'right'; g.fillStyle = '#3EE6FF'; g.font = '700 56px ' + mono; g.fillText(fw(l.current) + ' ' + U(), W - 100, y); g.textAlign = 'left'; if (i < lifts.length - 1) { g.strokeStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.moveTo(100, y + 96); g.lineTo(W - 100, y + 96); g.stroke(); } });
   g.fillStyle = '#5F6776'; g.font = '500 28px ' + ui; g.fillText(new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) + ' · estimates from published standards', 100, H - 120);
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   const file = new File([blob], 'arise-rank-card.png', { type: 'image/png' });
@@ -1232,7 +1257,7 @@ function seedDemo() {
 load(); buildEx(); bindWorkoutDelegates();
 if (location.search.includes('demo') && !state.sessions.length && !state.active) {
   seedDemo();
-  if (location.search.includes('active')) { const r = state.routines[0]; state.active = { id: uid(), startedAt: Date.now() - 14 * 60000, name: r.name, routineId: r.id, entries: [], rest: null }; r.items.forEach(it => addExerciseToActive(it.exId, it.sets, it.reps, it.restSec)); state.active.entries[0].sets[0].done = true; state.active.entries[0].sets[1].done = true; save(); }
+  if (location.search.includes('active')) { const r = state.routines[0]; state.active = { id: uid(), startedAt: Date.now() - 14 * 60000, name: r.name, routineId: r.id, entries: [], rest: null }; r.items.forEach(it => addExerciseToActive(it.exId, it.sets, it.reps, it.restSec, it.repsMax)); state.active.entries[0].sets[0].done = true; state.active.entries[0].sets[1].done = true; save(); }
 }
 const hashTab = location.hash.replace('#', '');
 if (['workout', 'routines', 'progress', 'profile'].includes(hashTab)) tab = hashTab;

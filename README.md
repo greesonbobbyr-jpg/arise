@@ -43,7 +43,23 @@ Open `index.html?demo` on a fresh install to seed eight weeks of sample workouts
 ## Tests
 
 ```
-node tests.js
+node tests.js        # math, standards, stall logic, weight conventions
+bash e2e/run.sh      # unit tests + browser flows in headless Chrome at 390px and 360px
 ```
+
+The browser flows need Python (for the local server), Node 22+ and Chrome. Set `CHROME_PATH` if Chrome is not in the default Windows location.
+
+## How weight is entered
+
+Each exercise has a fixed convention, shown on the workout screen as the weight column header and a hint under the name:
+
+| Convention | Examples | Column |
+|---|---|---|
+| Total load | Barbell, machines, one-stack cables, goblet squat | `lb` |
+| Per dumbbell | Dumbbell press, curls, rows, lunges | `lb/DB` |
+| Per side | Cable fly on two stacks, single-arm cable work | `lb/side` |
+| Added weight | Pull-ups, dips, push-ups | `+lb` |
+
+Progress, PREVIOUS, the shadow row and PRs compare in the entered unit. Volume counts both hands or sides, and strength standards for dumbbell lifts use the pair. Custom exercises pick their convention when created.
 
 Covers Epley (170×5 → 198, 170×8 → 215, +8.6%), bodyweight loads, the 14-day baseline window, stall detection and every prescription branch, percentile interpolation and caps, the readout generator, and the streak/level math.
