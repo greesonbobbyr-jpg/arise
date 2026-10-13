@@ -485,51 +485,6 @@
     return false;
   }
 
-  const ACHIEVEMENTS = [
-    { id: 'first',     name: 'Awakened',        desc: 'Finish your first workout',            check: c => c.sessions.length >= 1 },
-    { id: 'w10',       name: 'Regular',         desc: '10 workouts',                          check: c => c.sessions.length >= 10 },
-    { id: 'w50',       name: 'Veteran',         desc: '50 workouts',                          check: c => c.sessions.length >= 50 },
-    { id: 'w100',      name: 'Centurion',       desc: '100 workouts',                         check: c => c.sessions.length >= 100 },
-    { id: 'pr1',       name: 'First Blood',     desc: 'Set your first PR',                    check: c => c.prCount >= 1 },
-    { id: 'pr25',      name: 'Relentless',      desc: '25 PRs',                               check: c => c.prCount >= 25 },
-    { id: 'streak3',   name: 'Consistent',      desc: '3-week streak',                        check: c => c.streak.weeks >= 3 },
-    { id: 'streak5',   name: 'Unbroken',        desc: '5-week streak',                        check: c => c.streak.weeks >= 5 },
-    { id: 'streak12',  name: 'Iron Will',       desc: '12-week streak',                       check: c => c.streak.weeks >= 12 },
-    { id: 'tier_int',  name: 'Intermediate',    desc: 'Reach Intermediate on any lift',       check: c => c.maxTier >= 2 },
-    { id: 'tier_adv',  name: 'Advanced',        desc: 'Reach Advanced on any lift',           check: c => c.maxTier >= 3 },
-    { id: 'tier_elite',name: 'Elite',           desc: 'Reach Elite on any lift',              check: c => c.maxTier >= 4 },
-    { id: 'dl2x',      name: 'Twice Yourself',  desc: '2× bodyweight deadlift e1RM',          check: c => c.ratio('bb_deadlift') >= 2 },
-    { id: 'sq15',      name: 'Foundation',      desc: '1.5× bodyweight squat e1RM',           check: c => c.ratio('bb_squat') >= 1.5 },
-    { id: 'bench1x',   name: 'Plate Club',      desc: '1× bodyweight bench e1RM',             check: c => c.ratio('bb_bench') >= 1 },
-    { id: 'pullup10',  name: 'Bar Hanger',      desc: '10 pull-ups in one set',               check: c => c.maxReps('bw_pullup') >= 10 },
-    { id: 'up10',      name: 'Leveling',        desc: '+10% overall strength',                check: c => c.overall >= 10 },
-    { id: 'vol10k',    name: 'Tonnage',         desc: '10,000 lb in one workout',             check: c => c.maxVolume >= 10000 },
-  ];
-
-  // Title presentation for the System reveal: [grade, emblem, flavor line].
-  // Grade sets how hard the reveal hits: common < rare < epic < legendary.
-  const ACH_META = {
-    first:      ['common',    'eye',      'The System acknowledges you.'],
-    w10:        ['common',    'dumbbell', 'Discipline is becoming habit.'],
-    w50:        ['rare',      'dumbbell', 'Fifty gates entered. Fifty gates cleared.'],
-    w100:       ['epic',      'dumbbell', 'One hundred raids. You do not miss.'],
-    pr1:        ['common',    'bolt',     'Your former self has fallen.'],
-    pr25:       ['rare',      'bolt',     'Twenty-five limits broken.'],
-    streak3:    ['common',    'flame',    'Three weeks without retreat.'],
-    streak5:    ['rare',      'flame',    'The chain holds.'],
-    streak12:   ['epic',      'flame',    'A full season. No excuses were accepted.'],
-    tier_int:   ['rare',      'chevrons', 'You have left the weak behind.'],
-    tier_adv:   ['epic',      'chevrons', 'Few hunters ever reach this floor.'],
-    tier_elite: ['legendary', 'crown',    'The System has no further standard for you.'],
-    dl2x:       ['epic',      'barbell',  'You lifted two of yourself off the ground.'],
-    sq15:       ['rare',      'barbell',  'Strong legs carry everything else.'],
-    bench1x:    ['rare',      'barbell',  'Your own weight, pressed.'],
-    pullup10:   ['rare',      'bar',      'Ten clean pulls. Gravity noticed.'],
-    up10:       ['rare',      'trend',    'Ten percent stronger than the day you began.'],
-    vol10k:     ['rare',      'stack',    'Five tons moved in a single session.'],
-  };
-  for (const a of ACHIEVEMENTS) { const m = ACH_META[a.id] || ['common', 'eye', '']; a.rarity = m[0]; a.icon = m[1]; a.flavor = m[2]; }
-
   // total weight moved: per-dumbbell and per-side sets count both hands / both sides
   function sessionVolume(s, exById, bodyweight) {
     let v = 0;
@@ -600,7 +555,7 @@
   root.ARISE_CORE = {
     DAY, EX, PROGRAMS, GROUPS, STDS, PCTS, TIERS, TIER_SHORT, CAT_NAMES, LOWER_CATS,
     epley, isRough, round5, setLoad, setE1RM, history, analyze, stall, percentile, ageMult, ordinal,
-    readout, median, XP, RANKS, xpForLevel, levelFromXp, startOfWeek, streak, ACHIEVEMENTS, sessionVolume, fmtDate,
+    readout, median, XP, RANKS, xpForLevel, levelFromXp, startOfWeek, streak, sessionVolume, fmtDate,
     RANK_ORDER, RANK_RULES, rankFor, rankNext, dailyQuest, questDone, monthKey,
     loadMode, loadMult, loadWords, loadTag, loadStep, thresholds, popEstimate, lifterShare,
     dateKey, keyDate, addDays, dowOf, plannedFor, sessionsByDay, dayStatus, monthGrid, fillRotation, planStats,

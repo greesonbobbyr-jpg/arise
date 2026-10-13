@@ -1,7 +1,7 @@
 /* Arise sound effects. Synthesized with the Web Audio API: no audio files, works offline.
    Sounds only play for the System (title notification, seal break, accept) and rank-ups. Nothing during set logging.
 
-   API  ARISE_SFX.play(name, { power })   name: notify | seal | accept | rankup   power 1 (common) … 2.4 (legendary)
+   API  ARISE_SFX.play(name, { power })   name: notify | seal | tick | accept | rankup   power 1 (common) … 2.4 (legendary)
         ARISE_SFX.enabled = true|false     (Profile toggle)
         ARISE_SFX.unlock()                 call inside a tap so mobile browsers allow audio
         ARISE_SFX.render(name, opts)       → Promise<{ samples: Float32Array, sampleRate, peak, rms, seconds }>, offline, for tests
@@ -90,10 +90,17 @@
       }
       return 0.2 + tail + 0.5;
     },
+    // one title in the reveal-all cascade: a bright blip that climbs a pentatonic scale as the count rises
+    tick(ac, out, t, o) {
+      const step = (o && o.step) || 0, scale = [0, 2, 4, 7, 9], semis = scale[step % 5] + 12 * (Math.floor(step / 5) % 3), f = 523.25 * Math.pow(2, semis / 12);
+      tone(ac, out, { type: 'triangle', f0: f, t, gain: 0.55, attack: 0.003, decay: 0.22 });
+      tone(ac, out, { type: 'sine', f0: f * 2, t, gain: 0.16, attack: 0.002, decay: 0.1 });
+      return 0.3;
+    },
     // accepting a title: a short, low confirmation
     accept(ac, out, t) {
-      tone(ac, out, { type: 'triangle', f0: 520, f1: 392, glide: 0.09, t, gain: 0.28, attack: 0.003, decay: 0.14 });
-      tone(ac, out, { type: 'sine', f0: 1040, t, gain: 0.07, attack: 0.002, decay: 0.05 });
+      tone(ac, out, { type: 'triangle', f0: 520, f1: 392, glide: 0.09, t, gain: 0.6, attack: 0.003, decay: 0.2 });
+      tone(ac, out, { type: 'sine', f0: 1040, t, gain: 0.15, attack: 0.002, decay: 0.07 });
       return 0.3;
     },
     // rank up: two hits and a rising major chord

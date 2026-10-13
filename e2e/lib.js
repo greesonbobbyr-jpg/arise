@@ -7,13 +7,22 @@ module.exports = ({ evalFn, sleep }) => {
   const click = async (sel) => { const r = await evalFn(`(()=>{const el=document.querySelector(${JSON.stringify(sel)}); if(!el) return 'MISSING'; el.click(); return 'ok'})()`); if (r !== 'ok') throw new Error('click failed: ' + sel); await sleep(250); };
   const type = async (sel, v) => { await evalFn(`(()=>{const el=document.querySelector(${JSON.stringify(sel)}); el.value=${JSON.stringify(String(v))}; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));})()`); await sleep(100); };
   const txt = sel => evalFn(`(document.querySelector(${JSON.stringify(sel)})||{}).textContent||''`);
+  const has = sel => evalFn(`!!document.querySelector(${JSON.stringify(sel)})`);
   const st = () => evalFn('JSON.parse(JSON.stringify(window.ARISE.state))');
   const modalOpen = () => evalFn(`document.querySelector('#modalbg').classList.contains('on')`);
   // dismiss the one-time "buzz when rest is over?" prompt if it appeared
   const dismissNotify = async () => { if (await modalOpen() && /Buzz when rest/.test(await txt('#modal'))) { await click('#modal .acts button'); await sleep(200); } };
-  // tap through any open System title reveal (sealed → revealed → accept, for each queued title)
+  // Get through any open System window: with a batch it takes REVEAL ALL (or "reveal the rest" part-way through),
+  // skips the cascade and accepts the summary; otherwise it taps through sealed → revealed → accept for each queued title.
   const sysOpen = () => evalFn(`!!document.querySelector('.sys.on')`);
-  const clearSystem = async () => { for (let i = 0; i < 60; i++) { if (!(await sysOpen())) break; await evalFn(`document.querySelector('.sys').click()`); await sleep(350); } await sleep(150); };
+  const clearSystem = async () => {
+    for (let i = 0; i < 80; i++) {
+      if (!(await sysOpen())) break;
+      await evalFn(`(() => { const c = document.querySelector('.sys .sys-btn[data-sys-choice]') || document.querySelector('.sys [data-sys-rest]'); (c || document.querySelector('.sys')).click(); })()`);
+      await sleep(350);
+    }
+    await sleep(150);
+  };
   const done = (label) => console.log(fails ? `\n${fails} ${label} CHECKS FAILED` : `\nall ${label} checks passed`);
-  return { check, click, type, txt, st, modalOpen, dismissNotify, sysOpen, clearSystem, done, SHOTS, get fails() { return fails; } };
+  return { check, click, type, txt, has, st, modalOpen, dismissNotify, sysOpen, clearSystem, done, SHOTS, get fails() { return fails; } };
 };

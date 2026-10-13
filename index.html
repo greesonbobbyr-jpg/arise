@@ -299,6 +299,28 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .wd.planned b{color:var(--cy)}.wd.done b,.wd.extra b{color:var(--gr)}.wd.missed b{color:var(--rd)}
 .frow{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:center;margin-bottom:8px}
 .frow.slot{grid-template-columns:28px 1fr 44px}
+.tcat{display:flex;align-items:baseline;gap:8px;margin:22px 4px 8px}
+.tcat b{font-size:17px}
+.tcard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--s1);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;min-height:78px;transition:transform var(--t)}
+.tcard:active{transform:scale(.98)}
+.tcard .em{width:58px;height:58px;flex:none}
+.tcard .em svg{width:100%;height:100%;display:block}
+.tcard .n{font-weight:700;line-height:1.2}
+.tcard .d{font-size:var(--fs-s);color:var(--tx2);line-height:1.3;margin-top:2px}
+.tcard .gtag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--cy);margin-top:4px}
+.tcard.g-epic .gtag{color:var(--gr)}
+.tcard.g-legendary .gtag{color:#F2FFE4;text-shadow:0 0 8px var(--gr)}
+.tcard.locked .n{color:var(--tx2)}
+.tcard.locked .gtag{color:var(--tx3);text-shadow:none}
+.tcard.sealed{box-shadow:inset 0 0 0 1.5px var(--cy);animation:sealpulse 1.6s ease-in-out infinite}
+.tcard.sealed .n{color:var(--cy);font-family:var(--f-num);letter-spacing:.24em}
+.tcard.sealed .d{color:var(--cy)}
+.tcard .pb{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:7px}
+.tcard .pb i{display:block;height:100%;background:var(--cy);opacity:.55;border-radius:2px}
+.tcard .pv{font-family:var(--f-num);font-size:11px;color:var(--tx3);margin-top:3px}
+.tsum{display:flex;gap:6px;margin-top:10px}
+.tsum svg{width:44px;height:44px}
+.sysnote-ring{box-shadow:inset 0 0 0 1.5px var(--cy);animation:sealpulse 1.6s ease-in-out infinite}
 .quest{border-left:3px solid var(--cy)}
 .quest.done{border-left-color:var(--gr)}
 .quest .title{font-weight:700;font-size:17px;margin:2px 0}
@@ -360,26 +382,29 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 <div class="toast" id="toast"></div>
 
 <script src="anatomy.js"></script>
+<script src="sfx.js"></script>
 <script src="system.js"></script>
 <script src="standards.js"></script>
 <script src="core.js"></script>
+<script src="titles.js"></script>
 <script>
 (function(){
 'use strict';
 const C = window.ARISE_CORE, DAY = C.DAY;
+const T = window.ARISE_TITLES, TITLES_VERSION = 2;      // bump when titles are added so the whole log is checked once
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
 const DEFAULT = () => ({
-  profile: { bodyweight: 180, units: 'lb', sex: 'm', age: 30, defaultRest: 120, weeklyTarget: 3, name: 'Hunter', keepAwake: true, notify: 'unasked' },
+  profile: { bodyweight: 180, units: 'lb', sex: 'm', age: 30, defaultRest: 120, weeklyTarget: 3, name: 'Hunter', keepAwake: true, notify: 'unasked', sound: true },
   routines: [], sessions: [], active: null, custom: [], exRest: {}, plan: { days: {}, repeats: [] },
-  game: { xp: 0, achievements: {}, prs: [], rank: 'E', quest: null, unseen: [] },
+  game: { xp: 0, achievements: {}, prs: [], rank: 'E', quest: null, unseen: [], questCount: 0, achVersion: 0 },
 });
 let state = DEFAULT();
 function normPlan() {
@@ -492,29 +517,23 @@ function overallChange() {
   const f = Object.values(analyses()).filter(a => a.formed);
   return f.length ? C.median(f.map(a => a.change)) : null;
 }
-function gameCtx() {
-  const an = analyses();
-  let maxTier = -1;
-  for (const id in an) { const t = tierInfo(exById[id], an[id].current); if (t && t.tier > maxTier) maxTier = t.tier; }
-  const ratio = id => an[id] ? an[id].current / (BW() || 1) : 0;
-  const maxReps = id => { let m = 0; for (const s of state.sessions) for (const e of s.entries || []) if (e.exId === id) for (const st of e.sets || []) if (!st.warmup && +st.r > m) m = +st.r; return m; };
-  let maxVolume = 0; for (const s of state.sessions) maxVolume = Math.max(maxVolume, C.sessionVolume(s, exById, BW()));
-  const ov = overallChange();
-  return { sessions: state.sessions, prCount: (state.game.prs || []).length, streak: C.streak(state.sessions, P().weeklyTarget), maxTier, ratio, maxReps, maxVolume, overall: ov == null ? 0 : ov };
+// Titles are rows in titles.js, each checked against one summary of the log (T.stats).
+function titleStats() {
+  return T.stats({ sessions: state.sessions, exById, analyses: analyses(), bodyweight: BW(), sex: P().sex, age: P().age, xp: state.game.xp, prs: state.game.prs,
+    questCount: state.game.questCount, plan: state.plan, weeklyTarget: P().weeklyTarget, now: Date.now() });
 }
 function checkAchievements() {
-  const ctx = gameCtx(), fresh = [];
-  for (const a of C.ACHIEVEMENTS) {
-    if (state.game.achievements[a.id]) continue;
-    let ok = false; try { ok = a.check(ctx); } catch (e) {}
-    if (ok) { state.game.achievements[a.id] = Date.now(); state.game.unseen = (state.game.unseen || []).concat(a.id); fresh.push(a); }
+  const S = titleStats(), fresh = [];
+  for (const t of T.TITLES) {
+    if (state.game.achievements[t.id] || !T.has(t, S)) continue;
+    state.game.achievements[t.id] = Date.now(); state.game.unseen = (state.game.unseen || []).concat(t.id); fresh.push(t);
   }
   return fresh;
 }
 // ---------- the System: earned titles stay sealed until the user opens them ----------
-function unseenIds() { return (state.game.unseen || []).filter(id => state.game.achievements[id] && C.ACHIEVEMENTS.some(a => a.id === id)); }
+function unseenIds() { return (state.game.unseen || []).filter(id => state.game.achievements[id] && T.BY_ID[id]); }
 async function revealTitles(ids, replay) {
-  const items = ids.map(id => C.ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean).map(a => ({ id: a.id, name: a.name, desc: a.desc, flavor: a.flavor, rarity: a.rarity, icon: a.icon }));
+  const items = ids.map(id => T.BY_ID[id]).filter(Boolean).map(t => ({ id: t.id, name: t.name, desc: unitText(t.desc), flavor: t.flavor, grade: t.grade, glyph: t.glyph, mark: t.mark }));
   if (!items.length) return;
   const seen = id => { state.game.unseen = (state.game.unseen || []).filter(x => x !== id); save(); };
   if (!window.ARISE_SYSTEM) { items.forEach(i => seen(i.id)); toast('Title acquired: ' + items.map(i => i.name).join(', ')); render(); return; }
@@ -568,7 +587,7 @@ function render() {
   else if (tab === 'routines') s.innerHTML = sub && sub.view === 'routine-edit' ? viewRoutineEdit() : viewRoutines();
   else if (tab === 'calendar') s.innerHTML = viewCalendar();
   else if (tab === 'progress') s.innerHTML = viewProgress();
-  else s.innerHTML = viewProfile();
+  else s.innerHTML = sub && sub.view === 'titles' ? viewTitles() : viewProfile();
   afterRender();
 }
 
@@ -827,7 +846,7 @@ async function finishWorkout() {
   // quest, rank and tiers before the session lands
   const quest = todayQuest();
   const questHit = !quest.done && C.questDone(quest, session, exById[quest.exId], BW(), quest.exId ? allTimeBest(quest.exId) : 0);
-  if (questHit) { xp += quest.xp; state.game.quest = { key: quest.key, done: true, date: Date.now() }; }
+  if (questHit) { xp += quest.xp; state.game.quest = { key: quest.key, done: true, date: Date.now() }; state.game.questCount = (state.game.questCount || 0) + 1; }
   const rankBefore = currentRank(), tiersBefore = tierMap();
   state.sessions.push(session);
   state.game.xp += xp; state.game.prs = (state.game.prs || []).concat(prs);
@@ -860,6 +879,7 @@ async function finishWorkout() {
 function showRankUp(letter, text, kicker) {
   const el = $('#rankup'); $('#rankup-letter').textContent = letter; $('#rankup-sub').textContent = text; $('.kicker', el).textContent = kicker || 'Rank up';
   el.classList.add('on'); if (navigator.vibrate) navigator.vibrate([40, 60, 40, 60, 120]);
+  if (window.ARISE_SFX) window.ARISE_SFX.play('rankup');
   const close = () => { el.classList.remove('on'); el.onclick = null; };
   el.onclick = close; setTimeout(() => { if (el.classList.contains('on')) el.onclick = close; }, 1400);
 }
@@ -1450,18 +1470,20 @@ function installCard() {
 async function doInstall() { if (!installEvt) return; const ev = installEvt; ev.prompt(); try { await ev.userChoice; } catch (e) {} installEvt = null; render(); }
 function viewProfile() {
   const p = P(), L = C.levelFromXp(state.game.xp);
-  const sealedSet = new Set(unseenIds());
-  const ach = C.ACHIEVEMENTS.map(a => { const got = !!state.game.achievements[a.id], sealed = sealedSet.has(a.id);
-    return '<button class="a' + (sealed ? ' sealed' : got ? ' on r-' + a.rarity : '') + '" data-ach="' + a.id + '"><span class="dot"></span><span class="n">' + (sealed ? '???' : esc(a.name)) + '</span><span class="d">' + (sealed ? 'New title · tap to reveal' : esc(a.desc)) + '</span></button>'; }).join('');
+  const sealedSet = new Set(unseenIds()), earnedT = T.TITLES.filter(t => state.game.achievements[t.id]);
+  const latest = earnedT.filter(t => !sealedSet.has(t.id)).sort((a, b) => state.game.achievements[b.id] - state.game.achievements[a.id]).slice(0, 5);
+  const emb = (t, o) => window.ARISE_SYSTEM ? window.ARISE_SYSTEM.emblem(t, Object.assign({ mini: true }, o)) : '';
   return '<div class="top"><h1>Profile</h1><span class="kicker">Rank ' + currentRank() + ' · Lv ' + L.level + '</span></div>' +
     '<div class="card"><label class="field"><span>Hunter name</span><input class="in" id="p-name" maxlength="24" value="' + esc(p.name || '') + '" placeholder="Hunter"></label>' +
     '<div class="row" style="gap:12px"><label class="field grow"><span>Bodyweight (' + U() + ')</span><input class="in num" id="p-bw" type="number" inputmode="decimal" step="any" value="' + fromLb(p.bodyweight) + '"></label><label class="field grow"><span>Age</span><input class="in num" id="p-age" type="number" inputmode="numeric" value="' + esc(p.age) + '"></label></div>' +
     '<div class="row" style="gap:12px"><div class="field grow"><label>Units</label><div class="seg" id="p-units"><button data-v="lb" class="' + (p.units === 'lb' ? 'on' : '') + '">lb</button><button data-v="kg" class="' + (p.units === 'kg' ? 'on' : '') + '">kg</button></div></div><div class="field grow"><label>Sex (for standards)</label><div class="seg" id="p-sex"><button data-v="m" class="' + (p.sex === 'm' ? 'on' : '') + '">Male</button><button data-v="f" class="' + (p.sex === 'f' ? 'on' : '') + '">Female</button></div></div></div>' +
     '<div class="row" style="gap:12px"><label class="field grow"><span>Default rest (s)</span><input class="in num" id="p-rest" type="number" inputmode="numeric" value="' + esc(p.defaultRest) + '"></label><label class="field grow"><span>Sessions / week goal</span><input class="in num" id="p-week" type="number" inputmode="numeric" value="' + esc(p.weeklyTarget) + '"></label></div>' +
     '<div class="field"><label>Keep screen on during workouts</label><div class="seg" id="p-awake"><button data-v="1" class="' + (p.keepAwake ? 'on' : '') + '">On</button><button data-v="0" class="' + (!p.keepAwake ? 'on' : '') + '">Off</button></div></div>' +
+    '<div class="field"><label>Sound effects (title reveals and rank-ups)</label><div class="row" style="gap:8px"><div class="seg grow" id="p-sound"><button data-v="1" class="' + (p.sound !== false ? 'on' : '') + '">On</button><button data-v="0" class="' + (p.sound === false ? 'on' : '') + '">Off</button></div><button class="btn ghost sm" id="p-sound-test" style="min-height:48px">Test</button></div></div>' +
     '<div class="row"><span class="small grow ' + (p.notify === 'granted' ? 'muted' : 'dim') + '">Rest-over notifications: ' + (p.notify === 'granted' ? 'on' : p.notify === 'denied' ? 'off' : 'you will be asked on your first rest') + '. Best effort when the screen is off.</span>' + (p.notify !== 'granted' && 'Notification' in window ? '<button class="btn ghost sm" id="p-notify">Enable</button>' : '') + '</div></div>' +
     '<div class="card"><div class="row"><div class="grow"><div class="kicker">Rank card</div><div class="small muted" style="margin-top:2px">Your rank, level, streak and top lifts as an image to share.</div></div><button class="btn primary sm" id="p-card">Make card</button></div></div>' +
-    '<div class="card"><div class="kicker" style="margin-bottom:10px">Achievements · ' + Object.keys(state.game.achievements).length + '/' + C.ACHIEVEMENTS.length + '</div><div class="ach">' + ach + '</div><div class="small dim" style="margin-top:10px">Tap an earned title to replay its reveal.</div></div>' +
+    '<button class="card' + (sealedSet.size ? ' sysnote-ring' : '') + '" id="p-titles" style="width:100%;text-align:left"><div class="row"><div class="grow"><div class="kicker">Titles · ' + earnedT.length + '/' + T.TITLES.length + (sealedSet.size ? ' · <span class="cy">' + sealedSet.size + ' sealed</span>' : '') + '</div>' +
+      (latest.length ? '<div class="tsum">' + latest.map(t => emb(t)).join('') + '</div>' : '<div class="small muted" style="margin-top:4px">Earn titles by training. ' + T.TITLES.length + ' to find.</div>') + '</div><span class="cy" style="font-weight:600">View all</span></div></button>' +
     (installEvt && !isStandalone() ? '<button class="btn primary full" id="p-install" style="margin-bottom:12px">Install app</button>' : '') +
     '<div class="card" style="padding:0"><button class="lrow" id="p-data-toggle" style="width:100%;padding:10px 16px;text-align:left"><div class="grow"><div class="t">Backup &amp; data</div><div class="s">' + state.sessions.length + ' workouts · ' + state.routines.length + ' routines' + (saveErr ? ' · <span class="rd">last save failed</span>' : '') + '</div></div><span class="dim" style="transform:rotate(' + (showData ? '90' : '0') + 'deg);display:inline-block;transition:transform var(--t)">' + icon('back').replace('M15 5l-7 7 7 7', 'M9 5l7 7-7 7') + '</span></button>' +
     (showData ? '<div style="padding:4px 16px 16px">' +
@@ -1471,13 +1493,58 @@ function viewProfile() {
       '<p class="note" style="margin-top:14px">Strength tiers compare you with people who lift and log their lifts, same sex and bodyweight, using Strength Level\'s published standards. They are not the general population and not other users of this app. e1RM uses Epley with reps capped at 12 and counts your best set. Baseline is your best in the first 14 days on a lift; current is your best in the last 28.</p></div>' : '') + '</div>' +
     '<div class="small dim" style="text-align:center;margin:8px 0 16px">Arise v' + APP_VERSION + '</div>';
 }
-function bindProfile() {
+// ---------- TITLES ----------
+let titleFilter = 'all';
+function fmtStat(t, v) {
+  const k = T.kind(t.stat);
+  if (t.stat === 'maxTier') return v < 0 ? 'No tier yet' : C.TIERS[Math.min(4, Math.floor(v))];   // names, not index numbers
+  if (t.stat === 'rank') return 'Rank ' + C.RANK_ORDER[Math.max(0, Math.min(5, Math.floor(v)))];
+  if (k === 'lb') return fw(v) + ' ' + U();
+  if (k === 'vol') { const u = P().units === 'kg' ? v * KG : v; return (u >= 1e6 ? (u / 1e6).toFixed(u >= 1e7 ? 0 : 1) + 'M' : u >= 1e3 ? Math.round(u / 1e3) + 'K' : String(Math.round(u))) + ' ' + U(); }
+  if (k === 'x') return (+v.toFixed(2)) + '×';
+  if (k === 'pct') return Math.round(v) + '%';
+  return String(Math.floor(v));
+}
+function viewTitles() {
+  const S = titleStats(), sealedSet = new Set(unseenIds()), got = t => !!state.game.achievements[t.id];
+  const emb = (t, o) => window.ARISE_SYSTEM ? window.ARISE_SYSTEM.emblem(t, Object.assign({ mini: true }, o)) : '';
+  const show = t => titleFilter === 'all' || (titleFilter === 'earned' ? got(t) : titleFilter === 'locked' ? !got(t) : t.grade === titleFilter);
+  const chips = [['all', 'All'], ['earned', 'Earned'], ['locked', 'Locked'], ['common', 'Common'], ['rare', 'Rare'], ['epic', 'Epic'], ['legendary', 'Legendary']]
+    .map(c => '<button class="chip' + (titleFilter === c[0] ? ' on' : '') + '" data-tf="' + c[0] + '">' + c[1] + '</button>').join('');
+  let html = '<div class="top"><button class="icon-btn" id="t-back" aria-label="Back">' + icon('back') + '</button><h1 class="grow">Titles</h1><span class="kicker" id="t-count">' + T.TITLES.filter(got).length + '/' + T.TITLES.length + '</span></div>' +
+    '<div class="chips" id="t-chips">' + chips + '</div>' +
+    (sealedSet.size ? '<button class="sysnote live" id="t-open"><span class="bang">!</span><span><b>System notification</b><span class="small muted">' + (sealedSet.size === 1 ? 'One title is sealed.' : sealedSet.size + ' titles are sealed.') + '</span></span><span class="go">OPEN</span></button>' : '');
+  let any = false;
+  for (const [cat, catName] of T.CATS) {
+    const all = T.TITLES.filter(t => t.cat === cat), list = all.filter(show); if (!list.length) continue; any = true;
+    html += '<div class="tcat"><b>' + esc(catName) + '</b><span class="small dim mono">' + all.filter(got).length + '/' + all.length + '</span></div>';
+    for (const t of list) {
+      const have = got(t), sealed = sealedSet.has(t.id), grade = t.grade[0].toUpperCase() + t.grade.slice(1);
+      if (sealed) { html += '<button class="tcard sealed" data-ach="' + t.id + '"><span class="em">' + emb(null, { sealed: true }) + '</span><span class="grow"><span class="n">???</span><div class="d">New title · tap to reveal</div></span></button>'; continue; }
+      const pr = T.progress(t, S);
+      html += '<button class="tcard ' + (have ? 'earned' : 'locked') + ' g-' + t.grade + '" data-ach="' + t.id + '"><span class="em">' + emb(t, { locked: !have }) + '</span><span class="grow"><div class="n">' + esc(t.name) + '</div><div class="d">' + esc(unitText(t.desc)) + '</div>' +
+        (have ? '<div class="gtag">' + grade + ' · ' + C.fmtDate(state.game.achievements[t.id]) + '</div>'
+              : '<div class="pb"><i style="width:' + (pr.frac * 100).toFixed(1) + '%"></i></div><div class="pv">' + fmtStat(t, pr.value) + ' / ' + fmtStat(t, pr.target) + ' · ' + grade + '</div>') + '</span></button>';
+    }
+  }
+  if (!any) html += '<div class="empty">No titles match this filter.</div>';
+  return html + '<p class="note" style="margin:16px 4px 20px">Lifted-weight titles count weight you actually logged for at least one rep. Tap an earned title to replay its reveal.</p>';
+}
+function bindTitles() {
+  $('#t-back').onclick = () => { sub = null; render(); window.scrollTo(0, 0); };
+  $$('#t-chips [data-tf]').forEach(b => b.onclick = () => { titleFilter = b.dataset.tf; render(); });
+  const op = $('#t-open'); if (op) op.onclick = () => revealTitles(unseenIds());
   $$('[data-ach]').forEach(b => b.onclick = () => {
-    const id = b.dataset.ach, a = C.ACHIEVEMENTS.find(x => x.id === id), un = unseenIds();
-    if (un.includes(id)) revealTitles([id].concat(un.filter(x => x !== id)));
+    const id = b.dataset.ach, t = T.BY_ID[id], un = unseenIds();
+    if (un.includes(id)) revealTitles([id]);
     else if (state.game.achievements[id]) revealTitles([id], true);
-    else toast('Locked · ' + a.desc);
+    else toast('Locked · ' + unitText(t.desc));
   });
+}
+function bindProfile() {
+  $('#p-titles').onclick = () => { sub = { view: 'titles' }; render(); window.scrollTo(0, 0); };
+  $$('#p-sound button').forEach(b => b.onclick = () => { P().sound = b.dataset.v === '1'; if (window.ARISE_SFX) window.ARISE_SFX.enabled = P().sound; save(); render(); });
+  $('#p-sound-test').onclick = () => { const S = window.ARISE_SFX; if (!S || !S.supported) return toast('This browser has no sound support'); if (!S.enabled) return toast('Sound effects are off'); S.play('seal', { power: 1.4 }); };
   const num = (id, key, min, max, conv) => { const el = $(id); if (!el) return; el.onchange = () => { let v = +el.value; if (isNaN(v)) return; v = Math.max(min, Math.min(max, v)); P()[key] = conv ? conv(v) : v; invalidate(); save(); render(); }; };
   num('#p-bw', 'bodyweight', 0, 1000, toLb); num('#p-age', 'age', 0, 120); num('#p-rest', 'defaultRest', 0, 900); num('#p-week', 'weeklyTarget', 1, 14);
   $$('#p-units button').forEach(b => b.onclick = () => { P().units = b.dataset.v; save(); render(); });
@@ -1598,7 +1665,7 @@ function afterRender() {
     bindDrag();
   }
   if (tab === 'calendar') bindCalendar();
-  if (tab === 'profile') bindProfile();
+  if (tab === 'profile') { if (sub && sub.view === 'titles') bindTitles(); else bindProfile(); }
 }
 
 // Delegated listeners for the active workout, bound ONCE (the #screen element persists across renders).
@@ -1659,15 +1726,21 @@ function seedDemo() {
     { id: 'demoB', name: 'Lower A', items: [{ exId: 'bb_squat', sets: 3, reps: 8, restSec: 180 }, { exId: 'bb_rdl', sets: 3, reps: 8, restSec: 150 }] },
   ];
   state.game.xp = 2600; state.profile.name = 'Sung';
-  invalidate(); checkAchievements(); state.game.unseen = location.search.includes('sealed') ? state.game.unseen.slice(0, 2) : []; state.game.rank = currentRank(); save();
+  invalidate(); checkAchievements(); state.game.achVersion = TITLES_VERSION;
+  state.game.unseen = location.search.includes('sealedall') ? state.game.unseen : location.search.includes('sealed') ? state.game.unseen.slice(0, 2) : [];
+  state.game.rank = currentRank(); save();
 }
 load(); buildEx(); bindWorkoutDelegates();
 if (location.search.includes('demo') && !state.sessions.length && !state.active) {
   seedDemo();
   if (location.search.includes('active')) { const r = state.routines[0]; state.active = { id: uid(), startedAt: Date.now() - 14 * 60000, name: r.name, routineId: r.id, entries: [], rest: null }; r.items.forEach(it => addExerciseToActive(it.exId, it.sets, it.reps, it.restSec, it.repsMax)); state.active.entries[0].sets[0].done = true; state.active.entries[0].sets[1].done = true; save(); }
 }
+// New titles are checked against the whole log once, so history counts. They arrive sealed, on the home banner.
+if ((state.game.achVersion || 0) < TITLES_VERSION) { if (state.sessions.length) checkAchievements(); state.game.achVersion = TITLES_VERSION; save(); }
+if (window.ARISE_SFX) { window.ARISE_SFX.enabled = P().sound !== false; document.addEventListener('pointerdown', () => window.ARISE_SFX.unlock(), true); }
 const hashTab = location.hash.replace('#', '');
 if (['workout', 'routines', 'calendar', 'progress', 'profile'].includes(hashTab)) tab = hashTab;
+if (hashTab === 'titles') { tab = 'profile'; sub = { view: 'titles' }; }
 if (state.active && !hashTab) tab = 'workout';
 render(); updateRest();
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(g => { persistState = !!g; if (tab === 'profile') render(); }).catch(() => { persistState = false; });
@@ -1681,7 +1754,7 @@ if ('serviceWorker' in navigator) window.addEventListener('load', () => navigato
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
 }).catch(() => {}));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { load(); buildEx(); invalidate(); updateRest(); if (!picker) render(); requestWake(); } });
-window.ARISE_DEBUG = { showRankUp, rankCard, revealTitles };
+window.ARISE_DEBUG = { showRankUp, rankCard, revealTitles, titleStats, checkAchievements };
 window.addEventListener('pagehide', save);
 window.ARISE = { get state() { return state; }, render, seedDemo };
 })();

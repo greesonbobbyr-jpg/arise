@@ -47,9 +47,11 @@ module.exports = async (ctx) => {
   check('window closes after the last accept', !(await sysOpen()));
   check('nothing left sealed, banner gone', (await st()).game.unseen.length === 0 && !(await evalFn(`!!document.querySelector('#sys-open')`)));
 
-  // --- Profile grid: sealed card, replay, locked
+  // --- Titles screen (Profile → Titles): sealed card, replay, locked
   await evalFn(`(()=>{window.ARISE.state.game.unseen=['streak3'];})()`);
   await click('[data-tab="profile"]'); await sleep(200);
+  check('Profile summarises titles and flags the sealed one', /Titles · \d+\/\d+ · 1 sealed/.test(await txt('#p-titles')), await txt('#p-titles'));
+  await click('#p-titles'); await sleep(250);
   const card = await txt('[data-ach="streak3"]');
   check('sealed card hides name and condition', /\?\?\?/.test(card) && /tap to reveal/.test(card) && !/Consistent|3-week/.test(card), card);
   await evalFn(`document.querySelector('[data-ach="streak3"]').scrollIntoView({block:'center'})`); await sleep(150);
@@ -75,12 +77,14 @@ module.exports = async (ctx) => {
   await shot(P('sys-6-summary.png'));
   await click('#modal .acts button.primary'); await sleep(1300);
   check('sealed window plays right after the summary', (await sysOpen()) && (await stage()) === 'sealed');
+  // several titles can land at once now; with more than three the window asks first. Take them one at a time here.
+  if (await evalFn(`!!document.querySelector('.sys [data-sys-choice="each"]')`)) { await evalFn(`document.querySelector('.sys [data-sys-choice="each"]').click()`); await sleep(900); }
   await tap(); await sleep(1600);
-  check('First Blood revealed', (await txt('.sys-name')) === 'First Blood', await txt('.sys-name'));
+  check('First Blood is the first one revealed', (await txt('.sys-name')) === 'First Blood', await txt('.sys-name'));
   await clearSystem();
 
   // --- legendary grade, for the look
-  await evalFn(`(window.ARISE_SYSTEM.reveal([{id:'tier_elite',name:'Elite',desc:'Reach Elite on any lift',flavor:'The System has no further standard for you.',rarity:'legendary',icon:'crown'}],{sealed:false}), 1)`);
+  await evalFn(`(window.ARISE_SYSTEM.reveal([{id:'tier_elite',name:'Elite',desc:'Reach Elite on any lift',flavor:'The System has no further standard for you.',grade:'legendary',glyph:'crown',mark:''}],{sealed:false}), 1)`);
   await sleep(420); await shot(P('sys-7-legendary-burst.png'));
   await sleep(1500); await shot(P('sys-8-legendary.png'));
   check('legendary title renders', (await txt('.sys-name')) === 'Elite' && /Legendary title/.test(await txt('.sys')));

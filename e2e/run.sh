@@ -2,13 +2,13 @@
 # Runs unit tests and the browser flows against a local static server.
 # usage: bash e2e/run.sh            all flows
 #        bash e2e/run.sh tiers sys  only the named flows
-# (from the repo root; needs python, node 22+, Chrome)
-# Flows run two at a time: python's http.server drops requests when six browsers hit it at once.
+# (from the repo root; needs node 22+ and Chrome)
+# Flows run two at a time, to keep the machine responsive.
 # A flow whose browser stalls (driver exit code 3, usually a busy machine) is retried once.
 set -u
 cd "$(dirname "$0")/.."
 node tests.js | tail -1
-python -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+node e2e/serve.js 8765 >/dev/null 2>&1 &
 SRV=$!
 sleep 1
 B="http://127.0.0.1:8765/index.html"
@@ -21,9 +21,12 @@ FLOWS=(
   "sys|$B?demo&sealed#workout|390|system-reveal"
   "tiers|$B?demo#progress|390|tiers-and-shadow"
   "cal|$B?demo#calendar|390|calendar"
+  "titles|$B?demo&sealedall#workout|390|titles"
+  "sound|$B?demo#profile|390|sound"
   "c360|$B?demo#calendar|360|overflow"
   "w360|$B?demo&active#workout|360|overflow"
   "p360|$B?demo#progress|360|overflow"
+  "t360|$B?demo#titles|360|overflow"
 )
 RUN=()
 for f in "${FLOWS[@]}"; do

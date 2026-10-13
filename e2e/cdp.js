@@ -39,17 +39,19 @@ setTimeout(() => { console.error('BROWSER STALLED: flow exceeded ' + FLOW_TIMEOU
   const { result: { targetId } } = await send('Target.createTarget', { url: 'about:blank' });
   const { result: { sessionId } } = await send('Target.attachToTarget', { targetId, flatten: true });
   const S = (m, p) => send(m, p, sessionId);
-  await S('Page.enable'); await S('Runtime.enable'); await S('Log.enable');
+  await S('Page.enable'); await S('Runtime.enable'); await S('Log.enable'); await S('Network.enable');
   await S('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 2, mobile: true });
   await S('Emulation.setTouchEmulationEnabled', { enabled: true });
   // wait for the page to finish loading and, for the app, for it to boot (window.ARISE) — not a fixed delay
   const nav = async (u) => {
     events.length = 0; await S('Page.navigate', { url: u });
-    for (let i = 0; i < 80; i++) {
+    let up = false;
+    for (let i = 0; i < 80 && !up; i++) {
       await sleep(250);
       const r = await S('Runtime.evaluate', { expression: "document.readyState === 'complete' && (!!window.ARISE || !document.querySelector('#app'))", returnByValue: true });
-      if (r.result && r.result.result && r.result.result.value === true) break;
+      up = !!(r.result && r.result.result && r.result.result.value === true);
     }
+    if (!up) console.log('  FAIL the app did not start at ' + u);   // a check on a page that never booted proves nothing
     await sleep(500);
   };
   const evalFn = async (js) => {
@@ -64,6 +66,10 @@ setTimeout(() => { console.error('BROWSER STALLED: flow exceeded ' + FLOW_TIMEOU
   const errs = [];
   for (const e of events) if (e.method === 'Runtime.exceptionThrown') errs.push(JSON.stringify(e.params.exceptionDetails.exception && e.params.exceptionDetails.exception.description || e.params.exceptionDetails.text));
   for (const e of events) if (e.method === 'Runtime.consoleAPICalled' && (e.params.type === 'error' || e.params.type === 'warning')) errs.push(e.params.type + ': ' + e.params.args.map(a => a.value || a.description).join(' '));
+  // files that did not arrive: a script that fails to load shows up later as a confusing "undefined" error, so name it here
+  const reqUrl = {}; for (const e of events) if (e.method === 'Network.requestWillBeSent') reqUrl[e.params.requestId] = e.params.request.url;
+  for (const e of events) if (e.method === 'Network.loadingFailed' && !e.params.canceled) errs.push('failed to load: ' + (reqUrl[e.params.requestId] || '?') + ' (' + e.params.errorText + ')');
+  for (const e of events) if (e.method === 'Network.responseReceived' && e.params.response.status >= 400) errs.push('HTTP ' + e.params.response.status + ': ' + e.params.response.url);
   console.log(errs.length ? 'CONSOLE ERRORS:\n' + errs.join('\n') : 'no console errors');
   try { ws.close(); } catch (e) {}
   quit(0);
