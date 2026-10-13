@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path');
 const FILE = path.join(__dirname, '..', '..', 'index.html');
 let h = fs.readFileSync(FILE, 'utf8');
-const R = (a, b) => { const n = h.split(a).length - 1; if (n !== 1) throw new Error('expected 1 match, got ' + n + ':\n' + a.slice(0, 120)); h = h.replace(a, b); };
+const R = (a, b) => { const n = h.split(a).length - 1; if (n !== 1) throw new Error('expected 1 match, got ' + n + ':\n' + a.slice(0, 120)); h = h.replace(a, () => b); };  // function form: "$" and "h = h.replace(a, b); };" in b stay literal
 
 R('.exsub .ld{color:var(--tx3)}',
   '.exsub .ld{color:var(--tx3)}\n.exsub .tgt.up{background:var(--gr-tint);color:var(--gr);border:0;cursor:pointer;height:32px;padding:0 12px}\n.exsub .tgt.up:active{transform:scale(.97)}');

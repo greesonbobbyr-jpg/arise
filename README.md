@@ -9,6 +9,7 @@ Personal strength-training PWA. Logs workouts Hevy-style, then tells you in plai
 | `index.html` | The whole app: UI, styles, logic |
 | `core.js` | Exercise library, strength standards, all analysis math (pure functions) |
 | `anatomy.js` | Front and back muscle figure (traced paths from MuscleMap, MIT, see THIRD_PARTY.md) |
+| `system.js` | The System: notification window and title-reveal effects (canvas, no assets) |
 | `sw.js` | Service worker: precaches the shell so the app opens offline |
 | `manifest.json` | PWA manifest (installable, standalone, dark) |
 | `icons/` | 192, 512 and 512-maskable icons |
@@ -48,6 +49,12 @@ bash e2e/run.sh      # unit tests + browser flows in headless Chrome at 390px an
 ```
 
 The browser flows need Python (for the local server), Node 22+ and Chrome. Set `CHROME_PATH` if Chrome is not in the default Windows location.
+
+## Titles and the System
+
+Achievements are titles. A newly earned title stays **sealed**: the workout summary and the home screen only say that a System notification is waiting, and the Profile grid shows `???`. Opening it plays the reveal (seal break, light pillar, shockwaves, sparks, rising flames, decoded name). Titles have a grade, common to legendary, set in `ACH_META` in `core.js`; higher grades hit harder. Sealed state lives in `game.unseen` and is cleared per title at the moment it is revealed. Tapping an earned title on Profile replays its reveal. Effects are skipped under `prefers-reduced-motion`.
+
+`index.html?demo&sealed` seeds two sealed titles to try it.
 
 ## How weight is entered
 

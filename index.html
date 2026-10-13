@@ -229,6 +229,24 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .ach .a.on .n{color:var(--cy)}
 .ach .a .dot{width:10px;height:10px;border-radius:50%;background:var(--s3)}
 .ach .a.on .dot{background:var(--cy);box-shadow:0 0 10px var(--cy)}
+.ach .a{width:100%;cursor:pointer;transition:transform var(--t)}
+.ach .a:active{transform:scale(.96)}
+.ach .a.on.r-epic{box-shadow:inset 0 0 0 1.5px rgba(182,255,59,.45)}
+.ach .a.on.r-epic .n{color:var(--gr)}
+.ach .a.on.r-epic .dot{background:var(--gr);box-shadow:0 0 10px var(--gr)}
+.ach .a.on.r-legendary{box-shadow:inset 0 0 0 1.5px #F2FFE4,0 0 18px -6px var(--gr)}
+.ach .a.on.r-legendary .n{color:#F2FFE4;text-shadow:0 0 10px var(--gr)}
+.ach .a.on.r-legendary .dot{background:#F2FFE4;box-shadow:0 0 12px var(--gr)}
+.ach .a.sealed{box-shadow:inset 0 0 0 1.5px var(--cy);animation:sealpulse 1.6s ease-in-out infinite}
+.ach .a.sealed .n{color:var(--cy);font-family:var(--f-num);letter-spacing:.24em}
+.ach .a.sealed .d{color:var(--cy)}
+.ach .a.sealed .dot{background:var(--cy);box-shadow:0 0 12px var(--cy)}
+@keyframes sealpulse{0%,100%{background:var(--s2)}50%{background:var(--cy-tint)}}
+.sysnote{display:flex;gap:12px;align-items:center;width:100%;text-align:left;margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--cy-tint);box-shadow:inset 0 0 0 1px var(--cy-line)}
+.sysnote .bang{width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--cy);color:var(--cy);font-family:var(--f-num);font-weight:700;box-shadow:0 0 10px -2px var(--cy)}
+.sysnote b{display:block;letter-spacing:.16em;text-transform:uppercase;font-size:12px;color:var(--cy);font-family:var(--f-num)}
+.sysnote.live{margin:0 0 12px;animation:sealpulse 1.6s ease-in-out infinite;cursor:pointer}
+.sysnote.live .go{margin-left:auto;color:var(--cy);font-family:var(--f-num);font-weight:700;font-size:12px;letter-spacing:.16em;white-space:nowrap}
 .drag{touch-action:none;cursor:grab;color:var(--tx3);width:36px;height:44px;display:flex;align-items:center;justify-content:center}
 .ritem{display:flex;align-items:center;gap:6px;background:var(--s1);border-radius:10px;padding:6px 8px 6px 0;margin-bottom:8px}
 .ritem.dragging{opacity:.5}
@@ -298,6 +316,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 <div class="toast" id="toast"></div>
 
 <script src="anatomy.js"></script>
+<script src="system.js"></script>
 <script src="core.js"></script>
 <script>
 (function(){
@@ -308,14 +327,14 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
 const DEFAULT = () => ({
   profile: { bodyweight: 180, units: 'lb', sex: 'm', age: 30, defaultRest: 120, weeklyTarget: 3, name: 'Hunter', keepAwake: true, notify: 'unasked' },
   routines: [], sessions: [], active: null, custom: [], exRest: {},
-  game: { xp: 0, achievements: {}, prs: [], rank: 'E', quest: null },
+  game: { xp: 0, achievements: {}, prs: [], rank: 'E', quest: null, unseen: [] },
 });
 let state = DEFAULT();
 function load() {
@@ -326,6 +345,7 @@ function load() {
       if (o && typeof o === 'object') state = Object.assign(DEFAULT(), o);
       state.profile = Object.assign(DEFAULT().profile, state.profile || {});
       state.game = Object.assign(DEFAULT().game, state.game || {});
+      if (!Array.isArray(state.game.unseen)) state.game.unseen = [];
       ['routines', 'sessions', 'custom'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; });
       if (!state.exRest || typeof state.exRest !== 'object') state.exRest = {};
     }
@@ -434,9 +454,23 @@ function checkAchievements() {
   for (const a of C.ACHIEVEMENTS) {
     if (state.game.achievements[a.id]) continue;
     let ok = false; try { ok = a.check(ctx); } catch (e) {}
-    if (ok) { state.game.achievements[a.id] = Date.now(); fresh.push(a); }
+    if (ok) { state.game.achievements[a.id] = Date.now(); state.game.unseen = (state.game.unseen || []).concat(a.id); fresh.push(a); }
   }
   return fresh;
+}
+// ---------- the System: earned titles stay sealed until the user opens them ----------
+function unseenIds() { return (state.game.unseen || []).filter(id => state.game.achievements[id] && C.ACHIEVEMENTS.some(a => a.id === id)); }
+async function revealTitles(ids, replay) {
+  const items = ids.map(id => C.ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean).map(a => ({ id: a.id, name: a.name, desc: a.desc, flavor: a.flavor, rarity: a.rarity, icon: a.icon }));
+  if (!items.length) return;
+  const seen = id => { state.game.unseen = (state.game.unseen || []).filter(x => x !== id); save(); };
+  if (!window.ARISE_SYSTEM) { items.forEach(i => seen(i.id)); toast('Title acquired: ' + items.map(i => i.name).join(', ')); render(); return; }
+  await window.ARISE_SYSTEM.reveal(items, { sealed: !replay, onRevealed: replay ? null : seen });
+  if (!state.active) render();
+}
+function systemCard() {
+  const n = unseenIds().length; if (!n) return '';
+  return '<button class="sysnote live" id="sys-open"><span class="bang">!</span><span><b>System notification</b><span class="small muted">' + (n === 1 ? 'A new title has been acquired.' : n + ' new titles have been acquired.') + '</span></span><span class="go">OPEN</span></button>';
 }
 
 // ---------- UI primitives ----------
@@ -521,7 +555,7 @@ function viewHome() {
     const last = lastPerformed(r.id);
     return '<div class="lrow" data-start-routine="' + esc(r.id) + '"><div class="grow"><div class="t">' + esc(r.name) + '</div><div class="s">' + r.items.length + ' exercises' + (last ? ' · last ' + C.fmtDate(last) : ' · never done') + '</div></div><span class="btn ghost sm">Start</span></div>';
   }).join('');
-  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + installCard() + levelCard() + dailyQuestCard() + questCard() +
+  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + installCard() + systemCard() + levelCard() + dailyQuestCard() + questCard() +
     '<button class="btn primary full" id="start-empty" style="margin:4px 0 16px">Start empty workout</button>' +
     '<div class="kicker" style="margin:0 4px 6px">Routines</div><div class="card" style="padding:4px 12px">' + (routines || '<div class="empty small">No routines yet. Build one in the Routines tab.</div>') + '</div>' + recentCard();
 }
@@ -746,10 +780,11 @@ async function finishWorkout() {
     '<div class="card"><div class="kicker">Volume</div><div class="num" style="font-size:22px">' + fw(vol) + ' <span class="small muted">' + U() + '</span></div></div>' +
     '<div class="card"><div class="kicker">Streak</div><div class="num" style="font-size:22px">' + st.weeks + ' <span class="small muted">wk</span></div></div></div>' +
     (prs.length ? '<div class="kicker" style="margin-bottom:6px">Personal records</div>' + prs.map(p => '<div class="row" style="min-height:34px"><span class="grow">' + esc(exById[p.exId].name) + '</span><span class="num gr">' + fw(p.e1rm) + ' <span class="small muted">' + U() + ' e1RM</span></span></div>').join('') : '<p class="small dim">No PRs this time. Showing up counts.</p>') +
-    (fresh.length ? '<div class="kicker" style="margin:12px 0 6px">Unlocked</div>' + fresh.map(f => '<div class="row" style="min-height:30px"><span class="badge cy">' + esc(f.name) + '</span><span class="small muted">' + esc(f.desc) + '</span></div>').join('') : '') +
+    (fresh.length ? '<div class="sysnote"><span class="bang">!</span><span><b>System notification</b><span class="small muted">' + (fresh.length === 1 ? 'A new title has been acquired.' : fresh.length + ' new titles have been acquired.') + ' Sealed until you open ' + (fresh.length === 1 ? 'it' : 'them') + '.</span></span></div>' : '') +
     '</div>', buttons: [{ label: 'Arise', primary: true, value: true }] });
   for (const k in prToasted) delete prToasted[k];
   render();
+  if (unseenIds().length) await revealTitles(unseenIds());
   if (C.RANK_ORDER.indexOf(rankAfter) > C.RANK_ORDER.indexOf(rankBefore)) showRankUp(rankAfter, 'Hunter rank ' + rankBefore + ' → ' + rankAfter + '. ' + C.RANK_RULES[rankAfter] + '.');
   else if (tierUps.length) showRankUp(tierUps[0].tier[0], tierUps[0].name + ' is now ' + tierUps[0].tier + (tierUps.length > 1 ? ', and ' + (tierUps.length - 1) + ' more lift' + (tierUps.length > 2 ? 's' : '') + ' moved up.' : '.'), 'Tier up');
 }
@@ -1084,7 +1119,9 @@ function installCard() {
 async function doInstall() { if (!installEvt) return; const ev = installEvt; ev.prompt(); try { await ev.userChoice; } catch (e) {} installEvt = null; render(); }
 function viewProfile() {
   const p = P(), L = C.levelFromXp(state.game.xp);
-  const ach = C.ACHIEVEMENTS.map(a => '<div class="a' + (state.game.achievements[a.id] ? ' on' : '') + '"><span class="dot"></span><span class="n">' + esc(a.name) + '</span><span class="d">' + esc(a.desc) + '</span></div>').join('');
+  const sealedSet = new Set(unseenIds());
+  const ach = C.ACHIEVEMENTS.map(a => { const got = !!state.game.achievements[a.id], sealed = sealedSet.has(a.id);
+    return '<button class="a' + (sealed ? ' sealed' : got ? ' on r-' + a.rarity : '') + '" data-ach="' + a.id + '"><span class="dot"></span><span class="n">' + (sealed ? '???' : esc(a.name)) + '</span><span class="d">' + (sealed ? 'New title · tap to reveal' : esc(a.desc)) + '</span></button>'; }).join('');
   return '<div class="top"><h1>Profile</h1><span class="kicker">Rank ' + currentRank() + ' · Lv ' + L.level + '</span></div>' +
     '<div class="card"><label class="field"><span>Hunter name</span><input class="in" id="p-name" maxlength="24" value="' + esc(p.name || '') + '" placeholder="Hunter"></label>' +
     '<div class="row" style="gap:12px"><label class="field grow"><span>Bodyweight (' + U() + ')</span><input class="in num" id="p-bw" type="number" inputmode="decimal" step="any" value="' + fromLb(p.bodyweight) + '"></label><label class="field grow"><span>Age</span><input class="in num" id="p-age" type="number" inputmode="numeric" value="' + esc(p.age) + '"></label></div>' +
@@ -1093,7 +1130,7 @@ function viewProfile() {
     '<div class="field"><label>Keep screen on during workouts</label><div class="seg" id="p-awake"><button data-v="1" class="' + (p.keepAwake ? 'on' : '') + '">On</button><button data-v="0" class="' + (!p.keepAwake ? 'on' : '') + '">Off</button></div></div>' +
     '<div class="row"><span class="small grow ' + (p.notify === 'granted' ? 'muted' : 'dim') + '">Rest-over notifications: ' + (p.notify === 'granted' ? 'on' : p.notify === 'denied' ? 'off' : 'you will be asked on your first rest') + '. Best effort when the screen is off.</span>' + (p.notify !== 'granted' && 'Notification' in window ? '<button class="btn ghost sm" id="p-notify">Enable</button>' : '') + '</div></div>' +
     '<div class="card"><div class="row"><div class="grow"><div class="kicker">Rank card</div><div class="small muted" style="margin-top:2px">Your rank, level, streak and top lifts as an image to share.</div></div><button class="btn primary sm" id="p-card">Make card</button></div></div>' +
-    '<div class="card"><div class="kicker" style="margin-bottom:10px">Achievements · ' + Object.keys(state.game.achievements).length + '/' + C.ACHIEVEMENTS.length + '</div><div class="ach">' + ach + '</div></div>' +
+    '<div class="card"><div class="kicker" style="margin-bottom:10px">Achievements · ' + Object.keys(state.game.achievements).length + '/' + C.ACHIEVEMENTS.length + '</div><div class="ach">' + ach + '</div><div class="small dim" style="margin-top:10px">Tap an earned title to replay its reveal.</div></div>' +
     (installEvt && !isStandalone() ? '<button class="btn primary full" id="p-install" style="margin-bottom:12px">Install app</button>' : '') +
     '<div class="card" style="padding:0"><button class="lrow" id="p-data-toggle" style="width:100%;padding:10px 16px;text-align:left"><div class="grow"><div class="t">Backup &amp; data</div><div class="s">' + state.sessions.length + ' workouts · ' + state.routines.length + ' routines' + (saveErr ? ' · <span class="rd">last save failed</span>' : '') + '</div></div><span class="dim" style="transform:rotate(' + (showData ? '90' : '0') + 'deg);display:inline-block;transition:transform var(--t)">' + icon('back').replace('M15 5l-7 7 7 7', 'M9 5l7 7-7 7') + '</span></button>' +
     (showData ? '<div style="padding:4px 16px 16px">' +
@@ -1104,6 +1141,12 @@ function viewProfile() {
     '<div class="small dim" style="text-align:center;margin:8px 0 16px">Arise v' + APP_VERSION + '</div>';
 }
 function bindProfile() {
+  $$('[data-ach]').forEach(b => b.onclick = () => {
+    const id = b.dataset.ach, a = C.ACHIEVEMENTS.find(x => x.id === id), un = unseenIds();
+    if (un.includes(id)) revealTitles([id].concat(un.filter(x => x !== id)));
+    else if (state.game.achievements[id]) revealTitles([id], true);
+    else toast('Locked · ' + a.desc);
+  });
   const num = (id, key, min, max, conv) => { const el = $(id); if (!el) return; el.onchange = () => { let v = +el.value; if (isNaN(v)) return; v = Math.max(min, Math.min(max, v)); P()[key] = conv ? conv(v) : v; invalidate(); save(); render(); }; };
   num('#p-bw', 'bodyweight', 0, 1000, toLb); num('#p-age', 'age', 0, 120); num('#p-rest', 'defaultRest', 0, 900); num('#p-week', 'weeklyTarget', 1, 14);
   $$('#p-units button').forEach(b => b.onclick = () => { P().units = b.dataset.v; save(); render(); });
@@ -1128,7 +1171,7 @@ function bindProfile() {
       d.sessions.every(s => s && typeof s.date === 'number' && Array.isArray(s.entries) && s.entries.every(en => typeof en.exId === 'string' && Array.isArray(en.sets)));
     if (!valid) { toast('File does not look like an Arise backup', 'rd'); e.target.value = ''; return; }
     if (await confirmDlg('Replace all data?', 'This will overwrite your current ' + state.sessions.length + ' workouts with the ' + d.sessions.length + ' in the file. Export first if unsure.', 'Replace', true)) {
-      state = Object.assign(DEFAULT(), d); state.profile = Object.assign(DEFAULT().profile, d.profile); state.game = Object.assign(DEFAULT().game, d.game || {});
+      state = Object.assign(DEFAULT(), d); state.profile = Object.assign(DEFAULT().profile, d.profile); state.game = Object.assign(DEFAULT().game, d.game || {}); if (!Array.isArray(state.game.unseen)) state.game.unseen = [];
       ['routines', 'custom'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; }); if (!state.exRest || typeof state.exRest !== 'object') state.exRest = {};
       buildEx(); invalidate(); save(); toast('Imported ' + state.sessions.length + ' workouts'); render();
     }
@@ -1182,6 +1225,7 @@ function afterRender() {
     $$('[data-start-routine]').forEach(el => el.onclick = () => startWorkout(state.routines.find(r => r.id === el.dataset.startRoutine)));
     const sh = $('#see-history'); if (sh) sh.onclick = () => { sub = { view: 'history' }; render(); };
     const hi = $('#home-install'); if (hi) hi.onclick = doInstall;
+    const so = $('#sys-open'); if (so) so.onclick = () => revealTitles(unseenIds());
     $$('[data-hist]').forEach(el => el.onclick = () => { openHist = el.dataset.hist; sub = { view: 'history' }; render(); });
   }
   if (tab === 'workout' && state.active) { requestWake(); state.active.entries.forEach((e, i) => refreshBeating(i)); }
@@ -1280,7 +1324,7 @@ function seedDemo() {
     { id: 'demoB', name: 'Lower A', items: [{ exId: 'bb_squat', sets: 3, reps: 8, restSec: 180 }, { exId: 'bb_rdl', sets: 3, reps: 8, restSec: 150 }] },
   ];
   state.game.xp = 2600; state.profile.name = 'Sung';
-  invalidate(); checkAchievements(); state.game.rank = currentRank(); save();
+  invalidate(); checkAchievements(); state.game.unseen = location.search.includes('sealed') ? state.game.unseen.slice(0, 2) : []; state.game.rank = currentRank(); save();
 }
 load(); buildEx(); bindWorkoutDelegates();
 if (location.search.includes('demo') && !state.sessions.length && !state.active) {
@@ -1302,7 +1346,7 @@ if ('serviceWorker' in navigator) window.addEventListener('load', () => navigato
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
 }).catch(() => {}));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { load(); buildEx(); invalidate(); updateRest(); if (!picker) render(); requestWake(); } });
-window.ARISE_DEBUG = { showRankUp, rankCard };
+window.ARISE_DEBUG = { showRankUp, rankCard, revealTitles };
 window.addEventListener('pagehide', save);
 window.ARISE = { get state() { return state; }, render, seedDemo };
 })();

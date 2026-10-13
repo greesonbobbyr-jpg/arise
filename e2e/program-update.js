@@ -3,7 +3,7 @@
 const path = require('path');
 module.exports = async (ctx) => {
   const { evalFn, shot, sleep } = ctx;
-  const { check, click, type, txt, st, dismissNotify, done, SHOTS } = require('./lib')(ctx);
+  const { check, click, type, txt, st, dismissNotify, clearSystem, done, SHOTS } = require('./lib')(ctx);
   // simulate the old layout: add the program, then put Seated DB Shoulder Press back into Push
   await click('[data-tab="routines"]');
   await click('[data-program="pplp"]'); await sleep(200); await click('#modal .acts button.primary'); await sleep(300);
@@ -19,6 +19,7 @@ module.exports = async (ctx) => {
   check('7-rep middle set does not trigger the cue', !/Top of range/.test(await txt('#exstats-2')));
   await click('#finish'); await sleep(200); await click('#modal .acts button.primary'); await sleep(500);
   await click('#modal .acts button.primary'); await sleep(300);
+  await clearSystem();
   if (await evalFn(`document.querySelector('#rankup').classList.contains('on')`)) { await sleep(1500); await click('#rankup'); }
   // Update the program → Replace
   await click('[data-tab="routines"]');

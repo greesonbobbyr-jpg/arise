@@ -3,7 +3,7 @@
 const path = require('path');
 module.exports = async (ctx) => {
   const { evalFn, shot, nav, sleep } = ctx;
-  const { check, click, type, txt, st, dismissNotify, done, SHOTS } = require('./lib')(ctx);
+  const { check, click, type, txt, st, dismissNotify, clearSystem, done, SHOTS } = require('./lib')(ctx);
   await click('#start-empty');
   let s = await st();
   check('active workout created', !!s.active && s.active.entries.length === 0);
@@ -48,6 +48,7 @@ module.exports = async (ctx) => {
   check('only completed sets kept', last.entries.length === 1 && last.entries[0].sets.length === 1, last.entries);
   check('PR recorded', s.game.prs.length === before.game.prs.length + 1);
   await click('#modal .acts button.primary'); await sleep(300);
+  await clearSystem();
   if (await evalFn(`document.querySelector('#rankup').classList.contains('on')`)) { await sleep(1500); await click('#rankup'); }
   await click('[data-tab="routines"]'); await click('#new-routine');
   await type('#r-name', 'Push Day');

@@ -500,6 +500,30 @@
     { id: 'vol10k',    name: 'Tonnage',         desc: '10,000 lb in one workout',             check: c => c.maxVolume >= 10000 },
   ];
 
+  // Title presentation for the System reveal: [grade, emblem, flavor line].
+  // Grade sets how hard the reveal hits: common < rare < epic < legendary.
+  const ACH_META = {
+    first:      ['common',    'eye',      'The System acknowledges you.'],
+    w10:        ['common',    'dumbbell', 'Discipline is becoming habit.'],
+    w50:        ['rare',      'dumbbell', 'Fifty gates entered. Fifty gates cleared.'],
+    w100:       ['epic',      'dumbbell', 'One hundred raids. You do not miss.'],
+    pr1:        ['common',    'bolt',     'Your former self has fallen.'],
+    pr25:       ['rare',      'bolt',     'Twenty-five limits broken.'],
+    streak3:    ['common',    'flame',    'Three weeks without retreat.'],
+    streak5:    ['rare',      'flame',    'The chain holds.'],
+    streak12:   ['epic',      'flame',    'A full season. No excuses were accepted.'],
+    tier_int:   ['rare',      'chevrons', 'You have left the weak behind.'],
+    tier_adv:   ['epic',      'chevrons', 'Few hunters ever reach this floor.'],
+    tier_elite: ['legendary', 'crown',    'The System has no further standard for you.'],
+    dl2x:       ['epic',      'barbell',  'You lifted two of yourself off the ground.'],
+    sq15:       ['rare',      'barbell',  'Strong legs carry everything else.'],
+    bench1x:    ['rare',      'barbell',  'Your own weight, pressed.'],
+    pullup10:   ['rare',      'bar',      'Ten clean pulls. Gravity noticed.'],
+    up10:       ['rare',      'trend',    'Ten percent stronger than the day you began.'],
+    vol10k:     ['rare',      'stack',    'Five tons moved in a single session.'],
+  };
+  for (const a of ACHIEVEMENTS) { const m = ACH_META[a.id] || ['common', 'eye', '']; a.rarity = m[0]; a.icon = m[1]; a.flavor = m[2]; }
+
   // total weight moved: per-dumbbell and per-side sets count both hands / both sides
   function sessionVolume(s, exById, bodyweight) {
     let v = 0;

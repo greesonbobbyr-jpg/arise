@@ -268,6 +268,15 @@ console.log('\nWeight convention (total / per dumbbell / per side)');
   eq('barbell squat still +10 total', C.analyze('bb_squat', sq, squat, 180, now).stall.weight, 235);
 }
 
+console.log('\nTitles (achievement presentation)');
+{
+  const grades = ['common', 'rare', 'epic', 'legendary'];
+  eq('every title has a valid grade', C.ACHIEVEMENTS.every(a => grades.includes(a.rarity)), true);
+  eq('every title has an emblem and a flavor line', C.ACHIEVEMENTS.every(a => a.icon && a.flavor && a.flavor.length > 8), true);
+  eq('Elite is the legendary title', C.ACHIEVEMENTS.filter(a => a.rarity === 'legendary').map(a => a.id).join(','), 'tier_elite');
+  eq('Awakened and First Blood are common', ['first', 'pr1'].every(id => C.ACHIEVEMENTS.find(a => a.id === id).rarity === 'common'), true);
+}
+
 console.log('\nLibrary and programs');
 {
   const ids = new Set(C.EX.map(e => e.id));
