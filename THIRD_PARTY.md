@@ -26,6 +26,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## Strength Level (strength standards in `standards.js`)
+
+https://strengthlevel.com/strength-standards
+
+The Beginner / Novice / Intermediate / Advanced / Elite thresholds are calibrated to Strength Level's published
+1RM standards by bodyweight (retrieved 2026-10-13). Their standards are computed from lifts logged by their users,
+so the levels are percentiles among people who lift and log their lifts, not the general population. Arise stores
+five bodyweight anchors per sex for 22 lifts and interpolates between them (`tools/build-standards.js`). The data
+belongs to Strength Level. It is used here with credit in a personal, non-commercial app; their reuse terms could
+not be located, so obtain permission or replace the data before any commercial use.
+
+## CDC National Health Interview Survey, 2020 (share of adults who strength train)
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9098242/
+
+Percentage of adults meeting the federal muscle-strengthening guideline, by sex and age band. Used only for the
+"estimated against all men/women" line, which is labelled as an estimate in the app. Public domain (US government work).
+
 ## Fonts
 
 Geist and Geist Mono by Vercel, SIL Open Font License 1.1, served from Google Fonts.

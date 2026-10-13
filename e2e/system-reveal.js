@@ -70,7 +70,7 @@ module.exports = async (ctx) => {
   await type('[data-w="0:0"]', 205); await type('[data-r="0:0"]', 8); await click('[data-ck="0:0"]'); await sleep(300); await dismissNotify();
   await click('#finish'); await sleep(200); await click('#modal .acts button.primary'); await sleep(600);
   const sum = await txt('#modal');
-  check('summary announces a sealed title', /System notification/.test(sum) && /Sealed until you open it/.test(sum), sum.slice(-140));
+  check('summary announces sealed titles', /System notification/.test(sum) && /Sealed until you open (it|them)/.test(sum), sum.slice(-140));
   check('summary does not spoil First Blood', !/First Blood/.test(sum));
   await shot(P('sys-6-summary.png'));
   await click('#modal .acts button.primary'); await sleep(1300);

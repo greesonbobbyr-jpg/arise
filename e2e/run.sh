@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Runs unit tests and the browser flows against a local static server.
-# usage: bash e2e/run.sh      (from the repo root; needs python, node 22+, Chrome)
+# usage: bash e2e/run.sh            all flows
+#        bash e2e/run.sh tiers sys  only the named flows
+# (from the repo root; needs python, node 22+, Chrome)
 # Flows run two at a time: python's http.server drops requests when six browsers hit it at once.
 set -u
 cd "$(dirname "$0")/.."
@@ -10,10 +12,27 @@ SRV=$!
 sleep 1
 B="http://127.0.0.1:8765/index.html"
 LOG="${TMPDIR:-${TEMP:-/tmp}}/arise-e2e"; mkdir -p "$LOG"; rm -f "$LOG"/*.log
-flow() { node e2e/cdp.js "$1" "" "$2" "e2e/$3.js" > "$LOG/$4.log" 2>&1; }
-pair() { flow "$1" "$2" "$3" "$4" & local a=$!; flow "$5" "$6" "$7" "$8" & local b=$!; wait $a $b; }
-pair "$B?demo#workout" 390 core-flow core              "$B#routines" 390 load-and-ranges load
-pair "$B#routines" 390 program-update prog             "$B?demo&sealed#workout" 390 system-reveal sys
-pair "$B?demo&active#workout" 360 overflow w360        "$B?demo#progress" 360 overflow p360
-for f in core load prog sys w360 p360; do echo "== $f"; grep -E "FAIL|passed|FAILED|CONSOLE|ok   no horizontal" "$LOG/$f.log" || tail -3 "$LOG/$f.log"; done
+# name|url|width|steps file
+FLOWS=(
+  "core|$B?demo#workout|390|core-flow"
+  "load|$B#routines|390|load-and-ranges"
+  "prog|$B#routines|390|program-update"
+  "sys|$B?demo&sealed#workout|390|system-reveal"
+  "tiers|$B?demo#progress|390|tiers-and-shadow"
+  "w360|$B?demo&active#workout|360|overflow"
+  "p360|$B?demo#progress|360|overflow"
+)
+RUN=()
+for f in "${FLOWS[@]}"; do
+  name="${f%%|*}"
+  if [ $# -eq 0 ]; then RUN+=("$f"); else for want in "$@"; do [ "$want" = "$name" ] && RUN+=("$f"); done; fi
+done
+flow() { IFS='|' read -r name url width steps <<< "$1"; node e2e/cdp.js "$url" "" "$width" "e2e/$steps.js" > "$LOG/$name.log" 2>&1; }
+i=0
+while [ $i -lt ${#RUN[@]} ]; do
+  flow "${RUN[$i]}" & a=$!
+  if [ $((i + 1)) -lt ${#RUN[@]} ]; then flow "${RUN[$((i + 1))]}" & b=$!; wait $a $b; else wait $a; fi
+  i=$((i + 2))
+done
+for f in "${RUN[@]}"; do name="${f%%|*}"; echo "== $name"; grep -E "FAIL|passed|FAILED|CONSOLE|ok   no horizontal" "$LOG/$name.log" || tail -3 "$LOG/$name.log"; done
 kill $SRV 2>/dev/null

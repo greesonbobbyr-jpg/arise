@@ -24,8 +24,8 @@ module.exports = async (ctx) => {
   s = await st();
   check('set marked done', s.active.entries[0].sets[0].done === true);
   check('rest timer started (120s default)', s.active.rest && s.active.rest.total === 120, s.active.rest && s.active.rest.total);
-  check('PR toast fired', /NEW PR/.test(await txt('#toast')), await txt('#toast'));
-  check('live e1RM + PR badge', /PR/.test(await txt('#exstats-0')), await txt('#exstats-0'));
+  check('shadow-beaten toast fired', /SHADOW BEATEN/.test(await txt('#toast')), await txt('#toast'));
+  check('live e1RM names its set and marks the shadow beaten', /from set 1 \(190 × 8\)/.test(await txt('#exstats-0')) && /Shadow beaten/.test(await txt('#exstats-0')), await txt('#exstats-0'));
   await type('[data-w="0:1"]', ''); await type('[data-r="0:1"]', '');
   await click('[data-prev="0:1"]');
   s = await st();

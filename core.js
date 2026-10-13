@@ -17,7 +17,7 @@
     { id: 'bb_ohp',        name: 'Overhead Press',          cat: 'push',  equip: 'Barbell', muscle: 'Shoulders',  group: 'shoulders', std: 'ohp' },
     { id: 'bb_push_press', name: 'Push Press',              cat: 'push',  equip: 'Barbell', muscle: 'Shoulders',  group: 'shoulders', std: 'push_press' },
     { id: 'bb_deadlift',   name: 'Deadlift',                cat: 'hinge', equip: 'Barbell', muscle: 'Posterior chain', group: 'back', std: 'deadlift' },
-    { id: 'bb_sumo',       name: 'Sumo Deadlift',           cat: 'hinge', equip: 'Barbell', muscle: 'Glutes',     group: 'glutes',    std: 'deadlift' },
+    { id: 'bb_sumo',       name: 'Sumo Deadlift',           cat: 'hinge', equip: 'Barbell', muscle: 'Glutes',     group: 'glutes',    std: 'sumo_deadlift' },
     { id: 'bb_rdl',        name: 'Romanian Deadlift',       cat: 'hinge', equip: 'Barbell', muscle: 'Hamstrings', group: 'legs',      std: 'rdl' },
     { id: 'bb_row',        name: 'Barbell Row',             cat: 'pull',  equip: 'Barbell', muscle: 'Upper back', group: 'back',      std: 'barbell_row' },
     { id: 'bb_pendlay',    name: 'Pendlay Row',             cat: 'pull',  equip: 'Barbell', muscle: 'Upper back', group: 'back',      std: 'barbell_row' },
@@ -42,7 +42,7 @@
     { id: 'bw_pullup',     name: 'Pull-Up',                 cat: 'pull',  equip: 'Bodyweight', muscle: 'Lats',    group: 'back',      bw: 1.0,  std: 'pull_up' },
     { id: 'bw_chinup',     name: 'Chin-Up',                 cat: 'pull',  equip: 'Bodyweight', muscle: 'Lats',    group: 'back',      bw: 1.0,  std: 'chin_up' },
     { id: 'bw_dip',        name: 'Dip',                     cat: 'push',  equip: 'Bodyweight', muscle: 'Chest',   group: 'chest',     bw: 1.0,  std: 'dip' },
-    { id: 'bw_pushup',     name: 'Push-Up',                 cat: 'push',  equip: 'Bodyweight', muscle: 'Chest',   group: 'chest',     bw: 0.64, std: 'push_up' },
+    { id: 'bw_pushup',     name: 'Push-Up',                 cat: 'push',  equip: 'Bodyweight', muscle: 'Chest',   group: 'chest',     bw: 0.64 },
     { id: 'bw_inv_row',    name: 'Inverted Row',            cat: 'pull',  equip: 'Bodyweight', muscle: 'Upper back', group: 'back',   bw: 0.60 },
     { id: 'bw_hlr',        name: 'Hanging Leg Raise',       cat: 'core',  equip: 'Bodyweight', muscle: 'Abs',     group: 'core',      bw: 0.50 },
     { id: 'bw_ab_wheel',   name: 'Ab Wheel Rollout',        cat: 'core',  equip: 'Bodyweight', muscle: 'Abs',     group: 'core',      bw: 0.55 },
@@ -100,31 +100,10 @@
   const GROUPS = ['chest', 'back', 'shoulders', 'legs', 'glutes', 'arms', 'core'];
   const LOWER_CATS = { squat: 1, hinge: 1 };
 
-  // ---------- Strength standards (§5): e1RM / bodyweight at 5th,20th,50th,80th,95th pct ----------
-  const STD = {
-    squat:         { m: [0.75, 1.25, 1.75, 2.40, 3.00], f: [0.50, 0.85, 1.25, 1.80, 2.30] },
-    front_squat:   { m: [0.60, 1.00, 1.40, 1.90, 2.40], f: [0.40, 0.70, 1.00, 1.40, 1.85] },
-    bench:         { m: [0.50, 0.75, 1.25, 1.75, 2.15], f: [0.25, 0.45, 0.70, 1.05, 1.35] },
-    incline_bench: { m: [0.40, 0.65, 1.05, 1.50, 1.85], f: [0.20, 0.38, 0.60, 0.90, 1.15] },
-    close_grip:    { m: [0.40, 0.65, 1.05, 1.45, 1.80], f: [0.20, 0.38, 0.60, 0.88, 1.12] },
-    ohp:           { m: [0.35, 0.55, 0.80, 1.10, 1.40], f: [0.18, 0.32, 0.50, 0.72, 0.95] },
-    push_press:    { m: [0.45, 0.70, 1.00, 1.35, 1.70], f: [0.24, 0.42, 0.64, 0.90, 1.18] },
-    deadlift:      { m: [1.00, 1.50, 2.25, 3.00, 3.60], f: [0.55, 1.00, 1.50, 2.10, 2.75] },
-    rdl:           { m: [0.70, 1.10, 1.65, 2.25, 2.80], f: [0.40, 0.72, 1.10, 1.55, 2.05] },
-    barbell_row:   { m: [0.50, 0.75, 1.05, 1.40, 1.80], f: [0.28, 0.45, 0.68, 0.95, 1.25] },
-    lat_pulldown:  { m: [0.50, 0.75, 1.05, 1.40, 1.75], f: [0.30, 0.48, 0.70, 0.98, 1.25] },
-    hip_thrust:    { m: [1.00, 1.50, 2.25, 3.10, 4.00], f: [0.70, 1.15, 1.80, 2.55, 3.35] },
-    leg_press:     { m: [1.20, 2.00, 3.00, 4.20, 5.40], f: [0.80, 1.40, 2.20, 3.10, 4.00] },
-    barbell_curl:  { m: [0.25, 0.40, 0.60, 0.85, 1.10], f: [0.13, 0.22, 0.35, 0.52, 0.70] },
-    power_clean:   { m: [0.60, 0.90, 1.30, 1.70, 2.10], f: [0.35, 0.55, 0.82, 1.12, 1.42] },
-    db_bench:      { m: [0.40, 0.60, 1.00, 1.40, 1.75], f: [0.20, 0.36, 0.58, 0.85, 1.10] },
-    db_incline:    { m: [0.34, 0.52, 0.86, 1.22, 1.55], f: [0.17, 0.31, 0.50, 0.74, 0.97] },
-    db_shoulder:   { m: [0.30, 0.45, 0.70, 1.00, 1.30], f: [0.15, 0.27, 0.44, 0.65, 0.86] },
-    pull_up:       { m: [0.90, 1.05, 1.30, 1.60, 1.95], f: [0.85, 0.98, 1.18, 1.44, 1.75] },
-    chin_up:       { m: [0.92, 1.08, 1.35, 1.65, 2.00], f: [0.87, 1.00, 1.22, 1.48, 1.80] },
-    dip:           { m: [0.90, 1.10, 1.45, 1.80, 2.15], f: [0.82, 0.98, 1.25, 1.55, 1.90] },
-    push_up:       { m: [0.50, 0.58, 0.68, 0.80, 0.95], f: [0.46, 0.53, 0.62, 0.73, 0.87] },
-  };
+  // ---------- Strength standards ----------
+  // Published 1RM standards by bodyweight (see standards.js / tools/build-standards.js). Levels are percentiles
+  // among PEOPLE WHO LIFT AND LOG THEIR LIFTS of the same sex and bodyweight — not the general population.
+  const STDS = (typeof window !== 'undefined' && window.ARISE_STANDARDS) || (typeof require === 'function' ? require('./standards.js').ARISE_STANDARDS : null);
   const PCTS = [5, 20, 50, 80, 95];
   const TIERS = ['Beginner', 'Novice', 'Intermediate', 'Advanced', 'Elite'];
   const TIER_SHORT = ['Beg', 'Nov', 'Int', 'Adv', 'Elite'];
@@ -136,7 +115,7 @@
     if (r === 1) return w;
     return w * (1 + Math.min(r, 12) / 30);
   }
-  function isRough(r) { return (+r || 0) > 12; }
+  function isRough(r) { return (+r || 0) > 10; }
   function round5(x) { return Math.round(x / 5) * 5; }
   // ---------- How weight is entered for an exercise ----------
   // 'db'   = per dumbbell (the number printed on one dumbbell)       — ex.perHand
@@ -144,10 +123,9 @@
   // 'bw'   = added weight on top of bodyweight                         — ex.bw
   // 'total'= everything else (barbell, machine stack, one dumbbell held in both hands)
   // e1RM, PREVIOUS, shadow and progress % all stay in the entered unit, so they compare like with like.
-  // Anything that needs the whole load (volume, strength standards) multiplies by loadMult / stdMult.
+  // Volume needs the whole load, so it multiplies by loadMult. Standards are published in the entered unit.
   function loadMode(ex) { return !ex ? 'total' : ex.perHand ? 'db' : ex.perSide ? 'side' : ex.bw ? 'bw' : 'total'; }
   function loadMult(ex) { const m = loadMode(ex); return m === 'db' || m === 'side' ? 2 : 1; }   // both hands / both sides worked
-  function stdMult(ex) { return loadMode(ex) === 'db' ? 2 : 1; }                                 // dumbbell standards are for the pair
   const LOAD_WORDS = { db: ' per dumbbell', side: ' per side', bw: ' added', total: '' };
   const LOAD_TAG = { db: '/DB', side: '/side', bw: '', total: '' };
   function loadWords(ex) { return LOAD_WORDS[loadMode(ex)]; }
@@ -201,6 +179,7 @@
     let curWin = h.filter(x => x.date >= now - 28 * DAY);
     if (!curWin.length) curWin = [h[h.length - 1]];
     const current = Math.max(...curWin.map(x => x.best));
+    const curFrom = curWin.find(x => x.best === current);            // the session whose best set is the current e1RM
     const spanDays = (last - first) / DAY;
     const formed = h.length >= 3 && spanDays >= 14;
     const change = formed ? (current / baseline - 1) * 100 : null;
@@ -209,11 +188,17 @@
     h.forEach((x, i) => { if (x.best > best + 1e-9) { best = x.best; bestIdx = i; } });
     const sessionsSinceBest = h.length - 1 - bestIdx;
     const daysSinceBest = (now - h[bestIdx].date) / DAY;
-    const rough = h[h.length - 1].sets.some(s => isRough(s.r));
+    const rough = isRough(curFrom.top.r);
+    // Shadow = the all-time best set. lastVsShadow = how the most recent session did against the best BEFORE it.
+    const n = h.length, prevBest = n > 1 ? Math.max(...h.slice(0, n - 1).map(x => x.best)) : 0;
+    const lastVsShadow = n > 1 ? { beat: h[n - 1].best > prevBest + 1e-9, delta: h[n - 1].best - prevBest, last: h[n - 1].best, prevBest, date: h[n - 1].date } : null;
     return {
       exId, history: h, sessions: h.length, spanDays, baseline, current, change, formed,
       allTimeBest: best, bestDate: h[bestIdx].date, sessionsSinceBest, daysSinceBest,
       lastDate: last, rough,
+      currentFrom: { top: curFrom.top, date: curFrom.date },
+      shadow: { top: h[bestIdx].top, best, date: h[bestIdx].date },
+      lastVsShadow,
       stall: stall(h, ex, now, best, bestIdx),
     };
   }
@@ -275,26 +260,47 @@
     if (age > 0 && age < 18) return 1.06;
     return 1;
   }
-  function percentile(ratio, sex, age, key) {
-    const tbl = STD[key]; if (!tbl) return null;
-    const t = tbl[sex === 'f' ? 'f' : 'm'];
-    const adj = (+ratio || 0) * ageMult(age);
-    let pct, tier, pos;
-    if (adj < t[0]) {
-      pct = 1 + 4 * (adj / t[0]);
-      tier = 0; pos = 0;
-    } else if (adj >= t[4]) {
+  // Thresholds [Beginner, Novice, Intermediate, Advanced, Elite] in lb for this lift, sex and bodyweight.
+  // Linear between the published bodyweight anchors; beyond the lightest/heaviest anchor it continues the edge slope.
+  function thresholds(key, sex, bw) {
+    const L = STDS && STDS.lifts[key]; bw = +bw || 0;
+    if (!L || bw <= 0) return null;
+    const sx = sex === 'f' ? 'f' : 'm', A = STDS.anchors[sx], Rw = L[sx], n = A.length;
+    let i = 0; while (i < n - 2 && bw > A[i + 1]) i++;
+    const f = (bw - A[i]) / (A[i + 1] - A[i]);
+    const t = Rw[i].map((v, k) => v + f * (Rw[i + 1][k] - v));
+    for (let k = 0; k < 5; k++) t[k] = Math.max(t[k], Rw[0][k] * 0.5);      // floor when far below the lightest anchor
+    for (let k = 1; k < 5; k++) if (t[k] <= t[k - 1]) t[k] = t[k - 1] + 1;
+    return t;
+  }
+  // Where an estimated 1RM sits among lifters of the same sex and bodyweight.
+  // e1rm is in the unit the lift is logged in (per dumbbell for dumbbell lifts, total load for bodyweight lifts).
+  function percentile(e1rm, bw, sex, age, key) {
+    const raw = thresholds(key, sex, bw); if (!raw) return null;
+    const m = ageMult(age), t = raw.map(v => v / m), x = +e1rm || 0;   // age eases the targets, same effect as before
+    let pct, tier, pos, below = false;
+    if (x < t[0]) {
+      pct = 1 + 4 * (x / t[0]); tier = 0; pos = 0; below = true;
+    } else if (x >= t[4]) {
       const slope = (PCTS[4] - PCTS[3]) / (t[4] - t[3]);
-      pct = Math.min(99, PCTS[4] + (adj - t[4]) * slope);
-      tier = 4; pos = 0.8 + 0.2 * Math.min(1, (adj - t[4]) / (t[4] * 0.25));
+      pct = Math.min(99, PCTS[4] + (x - t[4]) * slope);
+      tier = 4; pos = 0.8 + 0.2 * Math.min(1, (x - t[4]) / (t[4] * 0.25));
     } else {
-      let i = 0; while (i < 3 && adj >= t[i + 1]) i++;
-      const f = (adj - t[i]) / (t[i + 1] - t[i]);
+      let i = 0; while (i < 3 && x >= t[i + 1]) i++;
+      const f = (x - t[i]) / (t[i + 1] - t[i]);
       pct = PCTS[i] + f * (PCTS[i + 1] - PCTS[i]);
       tier = i; pos = (i + f) / 5;
     }
-    return { pct: Math.max(1, Math.min(99, pct)), tier, tierName: TIERS[tier], pos, adjRatio: adj };
+    const ni = below ? 0 : tier + 1;
+    const next = ni <= 4 ? { tier: ni, name: TIERS[ni], weight: t[ni], gap: t[ni] - x } : null;
+    return { pct: Math.max(1, Math.min(99, pct)), tier, tierName: below ? 'Starting out' : TIERS[tier], below, pos, thresholds: t, next };
   }
+  // No measured strength data exists for the general population on these lifts. This ESTIMATE combines the lifter
+  // percentile with the share of adults who do strength training at all (CDC NHIS 2020: met the muscle-strengthening
+  // guideline), assuming people who do not train sit below the lifter Novice line. Only given from Novice up.
+  const LIFTER_SHARE = { m: [[45, .445], [65, .299], [999, .22]], f: [[45, .341], [65, .238], [999, .172]] };
+  function lifterShare(sex, age) { const a = +age >= 18 ? +age : 30; for (const [lim, sh] of LIFTER_SHARE[sex === 'f' ? 'f' : 'm']) if (a < lim) return sh; return .22; }
+  function popEstimate(pct, sex, age) { if (!(pct >= 20)) return null; const sh = lifterShare(sex, age); return Math.round((1 - sh) * 100 + sh * pct); }
   function ordinal(n) {
     n = Math.round(n); const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
@@ -413,19 +419,19 @@
     if (max >= 2) return 'C';
     return 'D';
   }
-  // lifts: [{exId, name, current, tier, std, mult?, words?}] ; current is in the entered unit, mult converts it to the
-  // unit the standards use (2 for per-dumbbell lifts). Returns the closest concrete target for the next rank, in the entered unit.
+  // lifts: [{exId, name, current, tier, std, base?, words?}]. current is the e1RM in the logged unit (total load for
+  // bodyweight lifts, where base is the bodyweight part). Returns the closest concrete target for the next rank.
   function rankNext(lifts, bodyweight, sex, age) {
     const rank = rankFor(lifts.map(l => l.tier));
-    const mult = ageMult(age), s = sex === 'f' ? 'f' : 'm';
-    const need = (l, tierIdx) => STD[l.std][s][tierIdx] * bodyweight / mult / (l.mult || 1);
+    const mult = ageMult(age);
+    const need = (l, tierIdx) => { const t = thresholds(l.std, sex, bodyweight); return t ? t[tierIdx] / mult : null; };
     const closest = (tierIdx, filter) => {
       let best = null;
       for (const l of lifts) {
-        if (!STD[l.std] || (filter && !filter(l))) continue;
-        const target = need(l, tierIdx); if (target <= l.current) continue;
+        if (filter && !filter(l)) continue;
+        const target = need(l, tierIdx); if (target == null || target <= l.current) continue;
         const gap = (target - l.current) / l.current;
-        if (!best || gap < best.gap) best = { exId: l.exId, name: l.name, target: round5(target), gap, tierIdx, words: l.words || '' };
+        if (!best || gap < best.gap) best = { exId: l.exId, name: l.name, target: round5(target - (l.base || 0)), added: !!l.base, gap, tierIdx, words: l.words || '' };
       }
       return best;
     };
@@ -439,7 +445,7 @@
     const nx = RANK_ORDER[RANK_ORDER.indexOf(rank) + 1];
     if (!c) return { rank, next: nx, text: 'Next rank ' + nx + ': ' + RANK_RULES[nx] + '.' };
     return { rank, next: nx, exId: c.exId, target: c.target, tier: TIERS[c.tierIdx],
-      text: 'Rank ' + nx + ' when ' + c.name + ' hits ' + c.target + ' e1RM' + c.words + ' (' + TIERS[c.tierIdx] + ').' };
+      text: 'Rank ' + nx + ' when ' + c.name + ' hits ' + (c.added ? '+' : '') + c.target + ' lb' + c.words + ' e1RM (' + TIERS[c.tierIdx] + ').' };
   }
 
   // ---------- Daily quest ----------
@@ -536,10 +542,10 @@
   }
 
   root.ARISE_CORE = {
-    DAY, EX, PROGRAMS, GROUPS, STD, PCTS, TIERS, TIER_SHORT, CAT_NAMES, LOWER_CATS,
+    DAY, EX, PROGRAMS, GROUPS, STDS, PCTS, TIERS, TIER_SHORT, CAT_NAMES, LOWER_CATS,
     epley, isRough, round5, setLoad, setE1RM, history, analyze, stall, percentile, ageMult, ordinal,
     readout, median, XP, RANKS, xpForLevel, levelFromXp, startOfWeek, streak, ACHIEVEMENTS, sessionVolume, fmtDate,
     RANK_ORDER, RANK_RULES, rankFor, rankNext, dailyQuest, questDone, monthKey,
-    loadMode, loadMult, stdMult, loadWords, loadTag, loadStep,
+    loadMode, loadMult, loadWords, loadTag, loadStep, thresholds, popEstimate, lifterShare,
   };
 })(typeof module !== 'undefined' && module.exports ? module.exports : window);

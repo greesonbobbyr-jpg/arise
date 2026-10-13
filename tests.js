@@ -22,7 +22,7 @@ eq('170×8 → 215', Math.round(C.epley(170, 8)), 215);
 eq('delta +8.6%', +((C.epley(170, 8) / C.epley(170, 5) - 1) * 100).toFixed(1), 8.6);
 eq('reps=1 → weight', C.epley(225, 1), 225);
 eq('reps capped at 12 (200×15 == 200×12)', C.epley(200, 15), C.epley(200, 12));
-eq('>12 reps flagged rough', C.isRough(15), true);
+eq('>10 reps flagged less precise', C.isRough(11), true);
 eq('0 reps → 0', C.epley(200, 0), 0);
 
 console.log('\n§4 Bodyweight load');
@@ -120,19 +120,70 @@ console.log('\n§6 Stall detection');
 eq('round5(221) → 220', C.round5(221), 220);
 eq('round5(223) → 225', C.round5(223), 225);
 
-console.log('\n§5 Percentile');
-eq('intermediate threshold → 50', C.percentile(1.75, 'm', 30, 'squat').pct, 50, 0.01);
-eq('tier at threshold = Intermediate', C.percentile(1.75, 'm', 30, 'squat').tierName, 'Intermediate');
-eq('novice threshold → 20', C.percentile(1.25, 'm', 30, 'squat').pct, 20, 0.01);
-eq('midpoint nov/int → 35', C.percentile(1.5, 'm', 30, 'squat').pct, 35, 0.01);
-eq('female bench 0.70 → 50', C.percentile(0.70, 'f', 30, 'bench').pct, 50, 0.01);
-eq('below beginner floors at 1', C.percentile(0, 'm', 30, 'squat').pct, 1, 0.01);
-eq('way above elite caps at 99', C.percentile(10, 'm', 30, 'squat').pct, 99, 0.01);
+console.log('\nStrength standards (published, by bodyweight, among lifters)');
+{
+  const P = (e, bw, key, sex, age) => C.percentile(e, bw, sex || 'm', age || 30, key);
+  eq('bench 243 @200 lb is the published 50th percentile', P(243, 200, 'bench').pct, 50, 0.01);
+  eq('tier at threshold = Intermediate', P(243, 200, 'bench').tierName, 'Intermediate');
+  eq('deadlift 382 @200 lb → 50th (old table demanded 450)', P(382, 200, 'deadlift').pct, 50, 0.01);
+  eq('deadlift 400 @200 lb is Intermediate, not Novice', P(400, 200, 'deadlift').tierName, 'Intermediate');
+  eq('squat novice threshold 255 @200 → 20th', P(255, 200, 'squat').pct, 20, 0.01);
+  eq('midpoint novice/intermediate → 35th', P((255 + 329) / 2, 200, 'squat').pct, 35, 0.01);
+  eq('female bench 120 @160 lb → 50th', P(120, 160, 'bench', 'f').pct, 50, 0.01);
+  eq('interpolates: deadlift intermediate @180 within 2% of published 348', Math.abs(C.thresholds('deadlift', 'm', 180)[2] - 348) / 348 < 0.02, true);
+  eq('interpolates: squat advanced @230 within 2% of published 462', Math.abs(C.thresholds('squat', 'm', 230)[3] - 462) / 462 < 0.02, true);
+  eq('heavier lifters need a lower ratio (bench intermediate ÷ bw at 300 < at 160)', C.thresholds('bench', 'm', 300)[2] / 300 < C.thresholds('bench', 'm', 160)[2] / 160, true);
+  let mono = true;
+  for (const key of Object.keys(C.STDS.lifts)) for (const sex of ['m', 'f']) for (let bw = 90; bw <= 340; bw += 10) {
+    const t = C.thresholds(key, sex, bw); for (let k = 1; k < 5; k++) if (!(t[k] > t[k - 1]) || !(t[0] > 0)) mono = false;
+  }
+  eq('thresholds positive and increasing for every lift, sex and bodyweight 90–340 lb', mono, true);
+  const low = P(0, 200, 'squat');
+  eq('below Beginner → "Starting out", percentile floors at 1', low.below && low.tierName === 'Starting out' && Math.abs(low.pct - 1) < 0.01, true);
+  eq('far above Elite caps at 99', P(2000, 200, 'squat').pct, 99, 0.01);
+  const nx = P(400, 200, 'deadlift').next;
+  eq('names the next level and its weight (Advanced at 476)', nx.name + ' ' + Math.round(nx.weight) + ' gap ' + Math.round(nx.gap), 'Advanced 476 gap 76');
+  eq('Elite has no next level', P(600, 200, 'deadlift').next, null);
+  eq('age 45 eases targets by 6%: 229 bench @200 → 50th', P(243 / 1.06, 200, 'bench', 'm', 45).pct, 50, 0.05);
+  eq('dumbbell bench compares per dumbbell: 98s @200 → 50th', P(98, 200, 'db_bench').pct, 50, 0.01);
+  eq('pull-up compares total load: bodyweight × 12 at 200 lb is Intermediate', P(C.setE1RM(pullup, { w: 0, r: 12 }, 200), 200, 'pull_up').tierName, 'Intermediate');
+  eq('sumo deadlift has its own table', exById.bb_sumo.std, 'sumo_deadlift');
+  eq('push-up has no weight standard (progress only)', exById.bw_pushup.std, undefined);
+  eq('no standards → null', P(100, 200, 'nope'), null);
+  eq('no bodyweight → null', P(100, 0, 'bench'), null);
+  // estimate against all men/women, including the majority who do not lift (CDC share by sex and age)
+  eq('estimate: lifter 50th, man aged 30 → stronger than ~78% of all men', C.popEstimate(50, 'm', 30), 78);
+  eq('estimate: lifter 20th (Novice), man aged 30 → ~64%', C.popEstimate(20, 'm', 30), 64);
+  eq('estimate uses the age band: man aged 50 → 85%', C.popEstimate(50, 'm', 50), 85);
+  eq('estimate for women aged 30 at lifter 50th → 83%', C.popEstimate(50, 'f', 30), 83);
+  eq('no estimate below Novice', C.popEstimate(19, 'm', 30), null);
+}
 eq('age 45 mult = 1.06', C.ageMult(45), 1.06, 1e-9);
 eq('age 100 mult capped 1.35', C.ageMult(100), 1.35, 1e-9);
 eq('age 16 mult = 1.06', C.ageMult(16), 1.06, 1e-9);
-eq('age adj: 1.65 @ 45 → 1.749 ≈ 49.9 pct', C.percentile(1.65, 'm', 45, 'squat').pct, 49.9, 0.5);
-eq('no standards → null', C.percentile(1, 'm', 30, 'nope'), null);
+
+console.log('\ne1RM source and shadow');
+{
+  const curl = exById.db_curl, t0 = Date.UTC(2026, 5, 1);
+  const one = [S(0, 'db_curl', [[50, 12], [50, 8], [50, 7]])];
+  const a = C.analyze('db_curl', one, curl, 180, t0 + DAY);
+  eq('per-set estimates for 50 × 12 / 8 / 7 are 70 / 63.3 / 61.7', [12, 8, 7].map(r => +C.epley(50, r).toFixed(1)).join(' / '), '70 / 63.3 / 61.7');
+  eq('session e1RM is the best set (70), later sets do not lower it', a.current, 70, 0.01);
+  eq('it names the set it came from (50 × 12)', a.currentFrom.top.w + '×' + a.currentFrom.top.r, '50×12');
+  eq('a 12-rep top set is flagged less precise', a.rough, true);
+  eq('10 reps is not flagged', C.isRough(10), false);
+  eq('first session has no shadow verdict yet', a.lastVsShadow, null);
+  const two = one.concat([S(7, 'db_curl', [[55, 10]])]);                    // 73.3 beats 70
+  const b = C.analyze('db_curl', two, curl, 180, t0 + 8 * DAY);
+  eq('last session beat the shadow', b.lastVsShadow.beat, true);
+  eq('by +3.3', b.lastVsShadow.delta, 3.33, 0.01);
+  eq('the shadow is now that set, dated that session', b.shadow.top.w + '×' + b.shadow.top.r + '@' + (b.shadow.date === two[1].date), '55×10@true');
+  const three = two.concat([S(14, 'db_curl', [[55, 8], [55, 8]])]);         // 69.7, short of 73.3
+  const c = C.analyze('db_curl', three, curl, 180, t0 + 15 * DAY);
+  eq('next session fell short: not beaten', c.lastVsShadow.beat, false);
+  eq('short by 3.7', c.lastVsShadow.delta, -3.67, 0.01);
+  eq('shadow unchanged (55 × 10)', c.shadow.top.w + '×' + c.shadow.top.r, '55×10');
+}
 eq('ordinal 72 → 72nd', C.ordinal(72), '72nd');
 eq('ordinal 11 → 11th', C.ordinal(11), '11th');
 
@@ -202,14 +253,19 @@ eq('elite → A', C.rankFor([4, 2]), 'A');
 eq('two elite → S', C.rankFor([4, 4]), 'S');
 eq('elite + two advanced → S', C.rankFor([4, 3, 3]), 'S');
 {
-  const lifts = [{ exId: 'bb_squat', name: 'Back Squat', current: 300, tier: 1, std: 'squat' }, { exId: 'bb_bench', name: 'Bench Press', current: 215, tier: 1, std: 'bench' }];
+  // at 180 lb: bench Intermediate ≈ 220, squat Intermediate ≈ 297
+  const lifts = [{ exId: 'bb_squat', name: 'Back Squat', current: 280, tier: 1, std: 'squat' }, { exId: 'bb_bench', name: 'Bench Press', current: 215, tier: 1, std: 'bench' }];
   const n = C.rankNext(lifts, 180, 'm', 30);
   eq('rank D → next C', n.next, 'C');
-  eq('closest lift by relative gap is bench (215 → 225, 4.6%)', n.exId, 'bb_bench');
+  eq('closest lift by relative gap is bench (215 → 220, 2%)', n.exId, 'bb_bench');
   eq('target rounds to 5', n.target % 5, 0);
-  eq('target = 1.25 × 180 = 225', n.target, 225);
-  eq('age 45 lowers the target (225 / 1.06 → 210)', C.rankNext([{ exId: 'bb_bench', name: 'Bench Press', current: 200, tier: 1, std: 'bench' }], 180, 'm', 45).target, 210);
-  eq('already past every line → rule text, no target', C.rankNext(lifts, 180, 'm', 45).target, undefined);
+  eq('target = published Intermediate at 180 lb (220)', n.target, 220);
+  eq('text gives the weight with its unit', /Bench Press hits 220 lb e1RM \(Intermediate\)/.test(n.text), true);
+  eq('age 45 lowers the target (220 / 1.06 → 205)', C.rankNext([{ exId: 'bb_bench', name: 'Bench Press', current: 200, tier: 1, std: 'bench' }], 180, 'm', 45).target, 205);
+  eq('already past every line → rule text, no target', C.rankNext([{ exId: 'bb_squat', name: 'Back Squat', current: 300, tier: 1, std: 'squat' }, { exId: 'bb_bench', name: 'Bench Press', current: 225, tier: 1, std: 'bench' }], 180, 'm', 45).target, undefined);
+  // bodyweight lifts: the target comes back as added weight (Intermediate at 200 lb = 278 total = +78 → +80)
+  const pu = C.rankNext([{ exId: 'bw_pullup', name: 'Pull-Up', current: 250, tier: 1, std: 'pull_up', base: 200, words: ' added' }], 200, 'm', 30);
+  eq('pull-up target is expressed as added weight', pu.target + ' ' + /hits \+80 lb added e1RM/.test(pu.text), '80 true');
   eq('S rank has no next', C.rankNext([{ exId: 'a', name: 'a', current: 1, tier: 4, std: 'squat' }, { exId: 'b', name: 'b', current: 1, tier: 4, std: 'bench' }], 180, 'm', 30).next, null);
 }
 
@@ -249,15 +305,12 @@ console.log('\nWeight convention (total / per dumbbell / per side)');
   // volume counts both hands / both sides
   const sess = { entries: [{ exId: 'db_bench', sets: [{ w: 60, r: 10 }] }, { exId: 'mc_cable_fly', sets: [{ w: 20, r: 12 }] }, { exId: 'bb_bench', sets: [{ w: 135, r: 5 }] }] };
   eq('volume: 2×60×10 + 2×20×12 + 135×5 = 2355', C.sessionVolume(sess, exById, 180), 2355);
-  // strength standards compare the pair: 80 lb dumbbells ×5 → 93.3 each → 186.7 both / 180 bw = 1.04 → just past intermediate (1.00)
-  eq('stdMult doubles dumbbell pairs', C.stdMult(dbb), 2);
-  eq('stdMult leaves per-side cables alone (no standard)', C.stdMult(fly), 1);
-  const ratio = C.setE1RM(dbb, { w: 80, r: 5 }, 180) * C.stdMult(dbb) / 180;
-  eq('80s × 5 is Intermediate on dumbbell bench', C.percentile(ratio, 'm', 30, 'db_bench').tierName, 'Intermediate');
+  // standards are published per dumbbell, the unit we log in: 80s × 5 → 93.3 per dumbbell, Intermediate at 180 lb is 89
+  eq('80s × 5 is Intermediate on dumbbell bench', C.percentile(C.setE1RM(dbb, { w: 80, r: 5 }, 180), 180, 'm', 30, 'db_bench').tierName, 'Intermediate');
   // rank targets come back in the entered unit (per dumbbell)
-  const n = C.rankNext([{ exId: 'db_bench', name: 'Dumbbell Bench Press', current: 70, tier: 1, std: 'db_bench', mult: 2, words: ' per dumbbell' }], 180, 'm', 30);
-  eq('rank target for db bench is per dumbbell (1.00×180/2 = 90)', n.target, 90);
-  eq('rank text says per dumbbell', /90 e1RM per dumbbell/.test(n.text), true);
+  const n = C.rankNext([{ exId: 'db_bench', name: 'Dumbbell Bench Press', current: 70, tier: 1, std: 'db_bench', words: ' per dumbbell' }], 180, 'm', 30);
+  eq('rank target for db bench is per dumbbell (published Intermediate at 180 lb ≈ 89 → 90)', n.target, 90);
+  eq('rank text says per dumbbell', /90 lb per dumbbell e1RM/.test(n.text), true);
   // stall prescriptions: +5 per dumbbell even on lower-body dumbbell lifts, and say so
   const now = Date.UTC(2026, 5, 1) + 45 * DAY;
   const sessions = [0, 10, 20, 30, 40].map(d => S(d, 'db_bss', [[40, 10], [40, 10], [40, 10]]));
@@ -281,7 +334,8 @@ console.log('\nLibrary and programs');
 {
   const ids = new Set(C.EX.map(e => e.id));
   eq('no duplicate exercise ids', ids.size, C.EX.length);
-  eq('every standards key exists', C.EX.every(e => !e.std || C.STD[e.std]), true);
+  eq('every standards key exists in the published data', C.EX.every(e => !e.std || C.STDS.lifts[e.std]), true);
+  eq('22 lifts have published standards', Object.keys(C.STDS.lifts).length, 22);
   const p = C.PROGRAMS[0];
   eq('PPLP has 4 routines', p.routines.length, 4);
   eq('every program exercise exists in the library', p.routines.every(r => r.items.every(i => ids.has(i[0]))), true);
