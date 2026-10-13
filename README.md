@@ -64,6 +64,12 @@ Tiers compare your estimated 1RM with **people who lift and log their lifts**, s
 
 `node tools/build-standards.js` regenerates `standards.js` and validates it. `node tools/spot-check-standards.js` prints lookups next to published values.
 
+## Calendar
+
+The Calendar tab plans workouts ahead. Drag a routine from the tray onto a day, or tap a day and pick one (search matches routine and exercise names). It saves to that day only. On a planned day you can turn on **Repeat every [weekday]**, move it by dragging, skip one occurrence, or stop the repeat. **Auto-fill** offers a weekly pattern (a routine per weekday, repeating until changed) or a rotation (an ordered loop with rest days, written day by day for 4, 8 or 12 weeks). Days show planned, done, missed, or an unplanned workout. The home screen shows what is planned today with a Start button and a strip for the week.
+
+Data: `state.plan = { days: { 'YYYY-MM-DD': routineId | '' }, repeats: [{ id, dow, routineId, from, until? }] }`. A day entry beats a repeat; `''` skips one occurrence. Pure helpers live in `core.js` (`plannedFor`, `dayStatus`, `monthGrid`, `fillRotation`, `planStats`). There are no timed reminders: a web app cannot fire reliable notifications while closed without a server.
+
 ## Titles and the System
 
 Achievements are titles. A newly earned title stays **sealed**: the workout summary and the home screen only say that a System notification is waiting, and the Profile grid shows `???`. Opening it plays the reveal (seal break, light pillar, shockwaves, sparks, rising flames, decoded name). Titles have a grade, common to legendary, set in `ACH_META` in `core.js`; higher grades hit harder. Sealed state lives in `game.unseen` and is cleared per title at the moment it is revealed. Tapping an earned title on Profile replays its reveal. Effects are skipped under `prefers-reduced-motion`.
