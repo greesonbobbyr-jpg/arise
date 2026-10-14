@@ -201,25 +201,83 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat3 .card{margin:0;padding:12px}
 .stat3 .v{font-size:24px}
-.bodymap{display:flex;justify-content:center;gap:4%;padding:6px 0 0}
-.bodymap svg{width:47%;height:auto;overflow:visible}
-.bodymap path,.bodymap polyline{vector-effect:non-scaling-stroke}
-.bodymap .sil{fill:#0D1016;stroke:rgba(62,230,255,.22);stroke-width:.7}
-.bodymap .mu{fill:#18222C;stroke:rgba(62,230,255,.5);stroke-width:.6;stroke-linejoin:round;cursor:pointer;transition:fill var(--t)}
-.bodymap .mu.lit{fill:var(--gr);stroke:rgba(182,255,59,.9)}
-.bodymap .fib{pointer-events:none;stroke:none}
-.bodymap .lit ~ .fib{stroke:rgba(10,20,10,.35)}
-.bodymap .glow{pointer-events:none;fill:var(--gr);filter:url(#bmglow);opacity:.7}
-.bodymap .nerve{fill:none;stroke:var(--cy);stroke-width:.6;opacity:.22;stroke-linecap:round}
-.bodymap .nerve.live{opacity:.75;stroke-dasharray:3 5;animation:nflow 1.6s linear infinite}
-.bodymap .node{fill:var(--cy);opacity:.35}
-.bodymap .node.live{opacity:1;fill:var(--gr)}
-.bodymap .lab{font-family:var(--f-ui);font-size:38px;fill:var(--tx3);letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+/* characters: traced male/female figures with the System look. Only opacity and transform animate. */
+.bodymap{position:relative;display:flex;justify-content:center;gap:2%;padding:16px 4px 2px;overflow:hidden}
+.bodymap::before{content:"";position:absolute;inset:4px;pointer-events:none;opacity:.55;background-repeat:no-repeat;
+  background-image:linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy));
+  background-size:18px 1.5px,1.5px 18px,18px 1.5px,1.5px 18px,18px 1.5px,1.5px 18px,18px 1.5px,1.5px 18px;
+  background-position:0 0,0 0,100% 0,100% 0,0 100%,0 100%,100% 100%,100% 100%}
+.bodymap::after{content:"";position:absolute;left:4px;right:4px;height:40%;top:0;transform:translateY(-100%);pointer-events:none;background:linear-gradient(transparent,rgba(62,230,255,.06),transparent);animation:bmscan 5s linear infinite}
+@keyframes bmscan{to{transform:translateY(260%)}}
+.char{position:relative;width:48%}
+.char .stage{position:relative}
+.char .stage > svg.fig{position:relative;width:100%;height:auto;overflow:visible;display:block}
+.char .aura{position:absolute;left:0;top:0;width:100%;height:auto;overflow:visible;pointer-events:none;opacity:var(--a);animation:bmbreathe 3.4s ease-in-out infinite;will-change:opacity,transform}
+@keyframes bmbreathe{0%,100%{opacity:calc(var(--a) * .78);transform:translateY(0) scale(1)}50%{opacity:var(--a);transform:translateY(-1.2%) scale(1.012)}}
+.char .ring{position:absolute;left:50%;width:78%;aspect-ratio:1;transform:translate(-50%,-50%) scaleY(.26);pointer-events:none}
+.char .ring svg{width:100%;height:100%;overflow:visible;animation:bmspin 18s linear infinite}
+.char .ring svg.r2{animation-direction:reverse;animation-duration:26s}
+.char .ring circle{fill:none;stroke:var(--cy)}
+@keyframes bmspin{to{transform:rotate(360deg)}}
+.char .lab2{text-align:center;margin-top:30px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.char path,.char polyline{vector-effect:non-scaling-stroke}
+.char .sil{fill:#07090D;stroke:rgba(62,230,255,.35);stroke-width:.8}
+.char .mu{fill:#141C25;stroke:rgba(62,230,255,.55);stroke-width:.6;stroke-linejoin:round;cursor:pointer;transition:fill var(--t)}
+.char .mu.lit{fill:var(--gr);stroke:rgba(182,255,59,.9)}
+.char .fib{pointer-events:none;stroke:none}
+.char .glow{pointer-events:none;fill:var(--gr);opacity:.7}
+.char .nerve{fill:none;stroke:var(--cy);stroke-width:.6;opacity:.22;stroke-linecap:round}
+.char .nerve.live{opacity:.75;stroke-dasharray:3 5;animation:nflow 1.6s linear infinite}
+.char .node{fill:var(--cy);opacity:.35}
+.char .node.live{opacity:1;fill:var(--gr)}
+.char .eye{fill:#E9FDFF}
+.char .eyeglow{fill:var(--cy)}
+.bm-hud{display:flex;justify-content:space-between;gap:8px;margin:2px 2px 0;font-family:var(--f-num);font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#58798A}
+.bm-hud b{color:var(--cy)}
 @keyframes nflow{to{stroke-dashoffset:-16}}
 @keyframes bmpulse{0%,100%{opacity:.35}50%{opacity:.8}}
-.bodymap .glow.pulse{animation:bmpulse 2.4s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.bodymap .nerve.live,.bodymap .glow.pulse{animation:none}}
-.bm-legend{display:flex;gap:14px;justify-content:center;margin-top:6px;font-size:11px;color:var(--tx3)}
+.char .glow.pulse{animation:bmpulse 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.char .nerve.live,.char .glow.pulse,.char .aura,.char .ring svg,.bodymap::after{animation:none}}
+/* first-run setup */
+body.setup-on .tabs,body.setup-on .rest{display:none}
+.setup{position:relative;margin-top:6px;padding:22px 18px 18px;border:1px solid var(--cy-line);border-radius:4px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(62,230,255,.07),rgba(62,230,255,.015));box-shadow:0 0 40px -14px rgba(62,230,255,.55),inset 0 0 30px -12px rgba(62,230,255,.3);animation:suin .45s ease-out}
+.setup::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(62,230,255,.03) 0 1px,transparent 1px 3px)}
+.setup > *{position:relative}
+@keyframes suin{from{opacity:0;transform:scaleY(.96)}}
+.su-head{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.su-bang{width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--cy);color:var(--cy);font-family:var(--f-num);font-weight:700;box-shadow:0 0 10px -2px var(--cy)}
+.su-sys{font-family:var(--f-num);font-weight:700;letter-spacing:.3em;font-size:13px}
+.su-dots{margin-left:auto;display:flex;gap:6px}
+.su-dots i{width:18px;height:3px;border-radius:2px;background:var(--s3)}
+.su-dots i.done{background:var(--cy-line)}
+.su-dots i.on{background:var(--cy);box-shadow:0 0 8px var(--cy)}
+.su-h{font-family:var(--f-num);font-size:21px;line-height:1.25;letter-spacing:.06em;text-transform:uppercase;margin:2px 0 8px;color:#F2FDFF;text-shadow:0 0 18px rgba(62,230,255,.45)}
+.su-p{color:var(--tx2);line-height:1.5;margin:0 0 16px}
+.su-go{width:100%;margin-top:6px;font-family:var(--f-num);letter-spacing:.2em}
+.su-go[disabled]{opacity:.35;box-shadow:none}
+.su-back{display:block;margin:8px auto 0;min-height:44px;padding:0 14px;color:var(--tx2);font-size:14px}
+.su-chars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 12px}
+.su-pick{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px 10px;border-radius:12px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--cy-line);overflow:hidden;transition:box-shadow var(--t),transform var(--t)}
+.su-pick .char{width:80%}
+.su-pick b{font-family:var(--f-num);letter-spacing:.24em;text-transform:uppercase;font-size:13px;color:var(--tx2);margin-top:2px}
+.su-pick.on{box-shadow:inset 0 0 0 2px var(--gr),0 0 26px -6px var(--gr)}
+.su-pick.on b{color:var(--gr)}
+.su-pick:active{transform:scale(.98)}
+.su-note{font-size:var(--fs-s);color:var(--tx2);line-height:1.45;margin:0 2px 8px}
+.su-err{min-height:20px;color:var(--rd);font-size:var(--fs-s);margin:0 2px 4px}
+.arise-fx{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 55%,rgba(91,59,255,.3),rgba(5,6,10,.97) 62%);animation:arin .35s ease-out}
+.arise-fx .char{width:46vw;max-width:220px;animation:arup 1.9s cubic-bezier(.2,.8,.2,1) both}
+.arise-fx .ar-t{margin-top:4px;font-family:var(--f-num);font-weight:800;font-size:42px;letter-spacing:.42em;padding-left:.42em;color:#F4F0FF;text-shadow:0 0 24px #7B5CFF,0 0 60px #5B3BFF;animation:art 1.9s ease-out both}
+.arise-fx .ar-s{margin-top:10px;font-family:var(--f-num);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#9C8CFF}
+.arise-fx.out{animation:arout .4s ease-in forwards}
+@keyframes arin{from{opacity:0}}
+@keyframes arout{to{opacity:0}}
+@keyframes arup{0%{opacity:0;transform:translateY(30px) scale(.9)}40%{opacity:1}100%{transform:none}}
+@keyframes art{0%{opacity:0;letter-spacing:1em}50%{opacity:1}100%{letter-spacing:.42em}}
+@media (prefers-reduced-motion:reduce){.setup,.arise-fx,.arise-fx .char,.arise-fx .ar-t{animation:none}}
+.share-i{width:15px;height:15px;vertical-align:-2px;color:var(--cy)}
+.bm-legend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;margin-top:6px;font-size:11px;color:var(--tx3)}
 .bm-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
 .ach{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .ach .a{background:var(--s2);border-radius:10px;padding:10px 8px;text-align:center;min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
@@ -391,20 +449,22 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 (function(){
 'use strict';
 const C = window.ARISE_CORE, DAY = C.DAY;
+const TS = () => T.forSex(P().sex);   // the title set for this hunter: women get their own targets on weight-based titles
 const T = window.ARISE_TITLES, TITLES_VERSION = 2;      // bump when titles are added so the whole log is checked once
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.10.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
 const DEFAULT = () => ({
-  profile: { bodyweight: 180, units: 'lb', sex: 'm', age: 30, defaultRest: 120, weeklyTarget: 3, name: 'Hunter', keepAwake: true, notify: 'unasked', sound: true },
+  profile: { bodyweight: 180, units: 'lb', sex: 'm', age: 30, defaultRest: 120, weeklyTarget: 3, name: 'Hunter', keepAwake: true, notify: 'unasked', sound: true, setupDone: false },
   routines: [], sessions: [], active: null, custom: [], exRest: {}, plan: { days: {}, repeats: [] },
   game: { xp: 0, achievements: {}, prs: [], rank: 'E', quest: null, unseen: [], questCount: 0, achVersion: 0 },
+  hints: {},   // lastExport, backupLater, iosLater (timestamps)
 });
 let state = DEFAULT();
 function normPlan() {
@@ -423,6 +483,9 @@ function load() {
       if (!Array.isArray(state.game.unseen)) state.game.unseen = [];
       ['routines', 'sessions', 'custom'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; });
       normPlan();
+      if (!state.hints || typeof state.hints !== 'object') state.hints = {};
+      // anyone who already has a log or routines was here before the setup screen existed
+      if (!state.profile.setupDone && (state.sessions.length || state.routines.length || state.active)) state.profile.setupDone = true;
       if (!state.exRest || typeof state.exRest !== 'object') state.exRest = {};
     }
   } catch (e) { console.warn('load failed', e); state = DEFAULT(); }
@@ -524,16 +587,16 @@ function titleStats() {
 }
 function checkAchievements() {
   const S = titleStats(), fresh = [];
-  for (const t of T.TITLES) {
+  for (const t of TS().TITLES) {
     if (state.game.achievements[t.id] || !T.has(t, S)) continue;
     state.game.achievements[t.id] = Date.now(); state.game.unseen = (state.game.unseen || []).concat(t.id); fresh.push(t);
   }
   return fresh;
 }
 // ---------- the System: earned titles stay sealed until the user opens them ----------
-function unseenIds() { return (state.game.unseen || []).filter(id => state.game.achievements[id] && T.BY_ID[id]); }
+function unseenIds() { return (state.game.unseen || []).filter(id => state.game.achievements[id] && TS().BY_ID[id]); }
 async function revealTitles(ids, replay) {
-  const items = ids.map(id => T.BY_ID[id]).filter(Boolean).map(t => ({ id: t.id, name: t.name, desc: unitText(t.desc), flavor: t.flavor, grade: t.grade, glyph: t.glyph, mark: t.mark }));
+  const items = ids.map(id => TS().BY_ID[id]).filter(Boolean).map(t => ({ id: t.id, name: t.name, desc: unitText(t.desc), flavor: t.flavor, grade: t.grade, glyph: t.glyph, mark: t.mark }));
   if (!items.length) return;
   const seen = id => { state.game.unseen = (state.game.unseen || []).filter(x => x !== id); save(); };
   if (!window.ARISE_SYSTEM) { items.forEach(i => seen(i.id)); toast('Title acquired: ' + items.map(i => i.name).join(', ')); render(); return; }
@@ -581,6 +644,8 @@ function setTab(t) { tab = t; sub = null; render(); window.scrollTo(0, 0); }
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTab(b.dataset.tab); });
 
 function render() {
+  if (!P().setupDone) { document.body.classList.add('setup-on'); $('#screen').innerHTML = viewSetup(); bindSetup(); return; }
+  document.body.classList.remove('setup-on');
   $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const s = $('#screen');
   if (tab === 'workout') s.innerHTML = state.active ? viewActive() : (sub && sub.view === 'history' ? viewHistory() : viewHome());
@@ -589,6 +654,72 @@ function render() {
   else if (tab === 'progress') s.innerHTML = viewProgress();
   else s.innerHTML = sub && sub.view === 'titles' ? viewTitles() : viewProfile();
   afterRender();
+}
+
+// ---------- FIRST-RUN SETUP ("Awakening") ----------
+const su = { step: 0, name: '', sex: null, bw: '', age: '', week: 3, units: 'lb', err: '' };
+const SU_LIT = { chest: 6, delts: 6, abs: 4, quads: 7, biceps: 4 };
+function viewSetup() {
+  const dots = [0, 1, 2].map(i => '<i class="' + (i === su.step ? 'on' : i < su.step ? 'done' : '') + '"></i>').join('');
+  let h = '<div class="setup"><div class="su-head"><span class="su-bang">!</span><span class="su-sys">SYSTEM</span><span class="su-dots" aria-label="Step ' + (su.step + 1) + ' of 3">' + dots + '</span></div>';
+  if (su.step === 0) {
+    h += '<h1 class="su-h">You have been chosen.</h1><p class="su-p">The System records every set you lift and shows you how strong you are becoming. Rise through the ranks, from E to S.</p>' +
+      '<label class="field"><span>What should the System call you?</span><input class="in" id="su-name" maxlength="24" placeholder="Hunter" autocomplete="nickname" value="' + esc(su.name) + '"></label>' +
+      '<button class="btn primary su-go" id="su-next">[ CONTINUE ]</button>';
+  } else if (su.step === 1) {
+    const pick = (sx, label) => '<button class="su-pick' + (su.sex === sx ? ' on' : '') + '" data-su-sex="' + sx + '" aria-pressed="' + (su.sex === sx) + '">' +
+      charSVG(sx, 'front', { lit: SU_LIT, rank: su.sex === sx ? 'B' : 'E', id: 'su-' + sx }) + '<b>' + label + '</b></button>';
+    h += '<h1 class="su-h">Choose your character</h1><div class="su-chars">' + pick('m', 'Male') + pick('f', 'Female') + '</div>' +
+      '<p class="su-note">Sets your character and the strength standards you are compared with. You can change it later in Profile.</p>' +
+      '<button class="btn primary su-go" id="su-next"' + (su.sex ? '' : ' disabled') + '>[ CONTINUE ]</button><button class="su-back" id="su-back">Back</button>';
+  } else {
+    const ph = su.units === 'kg' ? (su.sex === 'f' ? '64' : '82') : (su.sex === 'f' ? '140' : '180');
+    h += '<h1 class="su-h">Your stats</h1><p class="su-p">Used to compare your lifts with lifters your size and age.</p>' +
+      '<div class="row" style="gap:12px;align-items:flex-end"><label class="field grow"><span>Bodyweight (' + su.units + ')</span><input class="in num" id="su-bw" type="number" inputmode="decimal" step="any" placeholder="' + ph + '" value="' + esc(su.bw) + '"></label>' +
+      '<div class="field" style="width:118px"><div class="seg" id="su-units"><button data-v="lb" class="' + (su.units === 'lb' ? 'on' : '') + '">lb</button><button data-v="kg" class="' + (su.units === 'kg' ? 'on' : '') + '">kg</button></div></div></div>' +
+      '<label class="field"><span>Age</span><input class="in num" id="su-age" type="number" inputmode="numeric" placeholder="30" value="' + esc(su.age) + '"></label>' +
+      '<div class="field"><label>Workouts per week</label><div class="seg" id="su-week">' + [2, 3, 4, 5, 6].map(n => '<button data-v="' + n + '" class="' + (su.week === n ? 'on' : '') + '">' + n + '</button>').join('') + '</div></div>' +
+      '<div class="su-err" id="su-err" role="alert">' + esc(su.err) + '</div>' +
+      '<button class="btn primary su-go" id="su-finish">[ ARISE ]</button><button class="su-back" id="su-back">Back</button>';
+  }
+  return h + '</div>';
+}
+function bindSetup() {
+  const val = (id, k) => { const el = $(id); if (el) el.oninput = e => { su[k] = e.target.value; if (su.err) { su.err = ''; const er = $('#su-err'); if (er) er.textContent = ''; } }; };
+  val('#su-name', 'name'); val('#su-bw', 'bw'); val('#su-age', 'age');
+  const nm = $('#su-name'); if (nm) nm.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#su-next').click(); } };
+  $$('[data-su-sex]').forEach(b => b.onclick = () => { su.sex = b.dataset.suSex; render(); });
+  $$('#su-units button').forEach(b => b.onclick = () => {   // switching units converts what was typed
+    const to = b.dataset.v, v = parseFloat(su.bw);
+    if (to !== su.units && v > 0) su.bw = String(Math.round((to === 'kg' ? v * KG : v / KG) * 10) / 10);
+    su.units = to; render();
+  });
+  $$('#su-week button').forEach(b => b.onclick = () => { su.week = +b.dataset.v; render(); });
+  const nx = $('#su-next'); if (nx) nx.onclick = () => { if (su.step === 1 && !su.sex) return; su.step++; su.err = ''; render(); window.scrollTo(0, 0); };
+  const bk = $('#su-back'); if (bk) bk.onclick = () => { su.step = Math.max(0, su.step - 1); su.err = ''; render(); };
+  const fin = $('#su-finish'); if (fin) fin.onclick = finishSetup;
+}
+async function finishSetup() {
+  const bw = parseFloat(su.bw), age = parseInt(su.age, 10), lb = su.units === 'kg' ? bw / KG : bw;
+  if (!(lb >= 70 && lb <= 500)) { su.err = 'Enter your bodyweight (' + (su.units === 'kg' ? '32 to 227 kg' : '70 to 500 lb') + ').'; render(); return; }
+  if (!(age >= 13 && age <= 100)) { su.err = 'Enter your age (13 to 100).'; render(); return; }
+  Object.assign(P(), { name: su.name.trim().slice(0, 24) || 'Hunter', sex: su.sex === 'f' ? 'f' : 'm', units: su.units, bodyweight: Math.round(lb * 10) / 10, age, weeklyTarget: su.week, setupDone: true });
+  save(); invalidate();
+  await ariseMoment(P().sex);
+  tab = 'workout'; sub = null; render(); window.scrollTo(0, 0);
+}
+// the character powers up: every muscle lit, full aura, ARISE
+function ariseMoment(sex) {
+  return new Promise(res => {
+    const all = {}; ['chest', 'delts', 'abs', 'obliques', 'quads', 'adductors', 'glutes', 'biceps', 'triceps', 'forearms', 'calves', 'traps'].forEach(k => all[k] = 8);
+    const d = document.createElement('div'); d.className = 'arise-fx'; d.setAttribute('role', 'status');
+    d.innerHTML = charSVG(sex, 'front', { lit: all, rank: 'S', id: 'ar' }) + '<div class="ar-t">ARISE</div><div class="ar-s">The System has registered you</div>';
+    document.body.appendChild(d);
+    try { if (window.ARISE_SFX) window.ARISE_SFX.play('rankup'); } catch (e) {}
+    try { if (navigator.vibrate) navigator.vibrate([40, 50, 40, 60, 160]); } catch (e) {}
+    let done = false; const end = () => { if (done) return; done = true; d.classList.add('out'); setTimeout(() => { d.remove(); res(); }, 380); };
+    d.onclick = end; setTimeout(end, matchMedia('(prefers-reduced-motion: reduce)').matches ? 900 : 2300);
+  });
 }
 
 // ---------- HOME (no active workout) ----------
@@ -628,7 +759,7 @@ function viewHome() {
     const last = lastPerformed(r.id);
     return '<div class="lrow" data-start-routine="' + esc(r.id) + '"><div class="grow"><div class="t">' + esc(r.name) + '</div><div class="s">' + r.items.length + ' exercises' + (last ? ' · last ' + C.fmtDate(last) : ' · never done') + '</div></div><span class="btn ghost sm">Start</span></div>';
   }).join('');
-  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + installCard() + systemCard() + todayCard() + levelCard() + dailyQuestCard() + questCard() +
+  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + installCard() + iosCard('home') + systemCard() + todayCard() + backupCard() + levelCard() + dailyQuestCard() + questCard() +
     '<button class="btn primary full" id="start-empty" style="margin:4px 0 16px">Start empty workout</button>' +
     '<div class="kicker" style="margin:0 4px 6px">Routines</div><div class="card" style="padding:4px 12px">' + (routines || '<div class="empty small">No routines yet. Build one in the Routines tab.</div>') + '</div>' + recentCard();
 }
@@ -1395,38 +1526,67 @@ const BM_MUSCLE = { 'Chest': ['chest'], 'Upper chest': ['chest', 'delts'], 'Tric
   'Abs': ['abs', 'obliques'], 'Lower back': ['erectors'], 'Posterior chain': ['erectors', 'glutes', 'hams'], 'Full body': ['quads', 'glutes', 'traps', 'erectors'] };
 const BM_GROUP = { chest: ['chest'], back: ['lats', 'traps', 'rhomboids'], shoulders: ['delts'], legs: ['quads', 'hams', 'calves'], glutes: ['glutes'], arms: ['biceps', 'triceps', 'forearms'], core: ['abs', 'obliques'] };
 let bmSets = {}, bmNames = {};
-function bodyMap() {
+// A character: the traced figure for a sex and view, with the System look.
+// opts: lit {muscleKey: sets}, rank 'E'..'S' (aura strength), id (unique per figure on screen), label, tap (muscles answer taps)
+function charSVG(sex, view, opts) {
   const A = window.ARISE_ANATOMY; if (!A) return '';
+  const F = (A[sex === 'f' ? 'f' : 'm'] || A.m)[view], o = opts || {}, lit = o.lit || {}, id = o.id || (sex + view);
+  const anyLit = Object.keys(lit).length > 0, vb = F.viewBox.split(' ').map(Number);
+  // aura: violet smoke hugging the body, tongues of it rising, a thin cyan rim; stronger at higher Hunter ranks
+  const R = Math.max(0, 'EDCBAS'.indexOf(o.rank || 'E')), a = (0.42 + R * 0.116).toFixed(2), grow = 6 + R * 2.4, tear = 26 + R * 10, rise = 16 + R * 9;
+  const aura = '<svg class="aura" viewBox="' + F.viewBox + '" style="--a:' + a + '" aria-hidden="true"><defs><filter id="au-' + id + '" x="-35%" y="-30%" width="170%" height="150%">' +
+    '<feMorphology in="SourceAlpha" operator="dilate" radius="' + grow + '" result="g"/>' +
+    '<feTurbulence type="fractalNoise" baseFrequency="0.016 0.005" numOctaves="3" seed="' + (view === 'front' ? 7 : 11) + '" result="n"/>' +
+    '<feDisplacementMap in="g" in2="n" scale="' + tear + '" xChannelSelector="R" yChannelSelector="G" result="t"/>' +
+    '<feGaussianBlur in="t" stdDeviation="12" result="b"/><feFlood flood-color="#5B3BFF"/><feComposite in2="b" operator="in" result="v"/>' +
+    '<feTurbulence type="turbulence" baseFrequency="0.03 0.007" numOctaves="2" seed="' + (view === 'front' ? 3 : 5) + '" result="n2"/>' +
+    '<feDisplacementMap in="g" in2="n2" scale="' + (tear * 1.6) + '" xChannelSelector="R" yChannelSelector="G" result="t2"/>' +
+    '<feOffset in="t2" dy="-' + rise + '" result="t3"/><feGaussianBlur in="t3" stdDeviation="9" result="b3"/><feFlood flood-color="#8F6BFF" flood-opacity=".75"/><feComposite in2="b3" operator="in" result="w"/>' +
+    '<feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="r0"/><feFlood flood-color="#3EE6FF" flood-opacity=".5"/><feComposite in2="r0" operator="in" result="r1"/><feComposite in="r1" in2="SourceAlpha" operator="out" result="rim"/>' +
+    '<feMerge><feMergeNode in="w"/><feMergeNode in="v"/><feMergeNode in="rim"/></feMerge></filter></defs>' +
+    '<g filter="url(#au-' + id + ')">' + F.outline.map(d => '<path d="' + d + '"/>').join('') + '</g></svg>';
+  let s = '<svg class="fig" viewBox="' + F.viewBox + '" role="img" aria-label="' + (sex === 'f' ? 'Female' : 'Male') + ' ' + view + ' body map"><defs>' +
+    '<filter id="gl-' + id + '" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="16"/></filter>' +
+    '<filter id="ey-' + id + '" x="-200%" y="-400%" width="500%" height="900%"><feGaussianBlur stdDeviation="5"/></filter>' +
+    '<pattern id="fb-' + id + '" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(78)"><path d="M0,0 V13" style="stroke:rgba(62,230,255,.14);stroke-width:2.6;fill:none"/></pattern>' +
+    '<pattern id="fl-' + id + '" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(78)"><path d="M0,0 V13" style="stroke:rgba(12,50,8,.32);stroke-width:2.2;fill:none"/></pattern>' +
+    '<radialGradient id="sh-' + id + '" cx="45%" cy="22%" r="85%"><stop offset="0" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>';
+  s += F.outline.map(d => '<path class="sil" d="' + d + '"/>').join('');
+  for (const n of F.nerves || []) {
+    const live = n.keys.some(k => lit[k]);
+    s += '<polyline class="nerve' + (live ? ' live' : '') + '" points="' + n.pts.map(p => p.join(',')).join(' ') + '"/>';
+    for (const p of n.pts.slice(1, -1)) s += '<circle class="node' + (live ? ' live' : '') + '" cx="' + p[0] + '" cy="' + p[1] + '" r="7"/>';
+  }
+  for (const m of F.muscles) {
+    if (!bmNames[m.key]) bmNames[m.key] = m.name;
+    const n = lit[m.key] || 0, on = n > 0, op = on ? Math.min(1, 0.55 + n / 20) : 0, d = m.d.join(' ');
+    if (on) s += '<path class="glow' + (anyLit ? ' pulse' : '') + '" d="' + d + '" filter="url(#gl-' + id + ')" style="opacity:' + (op * 0.6).toFixed(2) + '"/>';
+    s += '<path class="mu' + (on ? ' lit' : '') + '" d="' + d + '"' + (o.tap ? ' data-bm="' + m.key + '"' : '') + (on ? ' style="fill-opacity:' + op.toFixed(2) + '"' : '') + '>' +
+      (o.tap ? '<title>' + m.name + (on ? ' · ' + n + ' sets this week' : ' · not trained this week') + '</title>' : '') + '</path>';
+    s += '<path class="fib" d="' + d + '" fill="url(#' + (on ? 'fl-' : 'fb-') + id + ')"/><path class="fib" d="' + d + '" fill="url(#sh-' + id + ')"/>';
+  }
+  if (F.eye) {   // shadow-soldier eyes: two thin glowing slits, tilted up at the outer corners
+    const ex = F.eye.w * 0.19, rx = F.eye.w * 0.085, ry = F.eye.w * 0.024, y = F.eye.y;
+    for (const sg of [-1, 1]) { const x = 512 + sg * ex, t = 'rotate(' + (-sg * 9) + ' ' + x + ' ' + y + ')';
+      s += '<ellipse class="eyeglow" filter="url(#ey-' + id + ')" cx="' + x + '" cy="' + y + '" rx="' + (rx * 1.6) + '" ry="' + (ry * 3) + '" transform="' + t + '"/><ellipse class="eye" cx="' + x + '" cy="' + y + '" rx="' + rx + '" ry="' + ry + '" transform="' + t + '"/>'; }
+  }
+  s += '</svg>';
+  const cy = ((F.feet - vb[1]) / vb[3] * 100).toFixed(1);   // summoning circle under the feet
+  const ring = '<div class="ring" style="top:' + cy + '%"><svg viewBox="-100 -100 200 200" aria-hidden="true"><circle r="92" stroke-width="1.6" stroke-dasharray="2 6" opacity=".7"/><circle r="80" stroke-width="1" opacity=".45"/><circle r="66" stroke-width="3" stroke-dasharray="24 10 4 10" opacity=".55"/></svg></div>' +
+    '<div class="ring" style="top:' + cy + '%"><svg class="r2" viewBox="-100 -100 200 200" aria-hidden="true"><circle r="98" stroke-width=".8" stroke-dasharray="40 14" opacity=".35"/><circle r="52" stroke-width="1.2" stroke-dasharray="1 5" opacity=".6"/></svg></div>';
+  return '<div class="char" data-sex="' + (sex === 'f' ? 'f' : 'm') + '" data-view="' + view + '"><div class="stage">' + ring + aura + s + '</div>' + (o.label ? '<div class="lab2">' + o.label + '</div>' : '') + '</div>';
+}
+function bodyMap() {
+  if (!window.ARISE_ANATOMY) return '';
   const cut = Date.now() - 7 * DAY; bmSets = {};
   for (const s of state.sessions) if (s.date >= cut) for (const e of s.entries || []) {
     const ex = exById[e.exId]; if (!ex) continue; const n = e.sets.filter(x => !x.warmup).length; if (!n) continue;
     for (const k of (BM_MUSCLE[ex.muscle] || BM_GROUP[ex.group] || [])) bmSets[k] = (bmSets[k] || 0) + n;
   }
-  const anyLit = Object.keys(bmSets).length > 0;
-  const defs = '<defs><filter id="bmglow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="16"/></filter>' +
-    '<pattern id="bmfib" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(78)"><path d="M0,0 V13" style="stroke:rgba(62,230,255,.16);stroke-width:2.6;fill:none"/></pattern>' +
-    '<pattern id="bmfibl" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(78)"><path d="M0,0 V13" style="stroke:rgba(12,50,8,.32);stroke-width:2.2;fill:none"/></pattern>' +
-    '<radialGradient id="bmsheen" cx="45%" cy="22%" r="85%"><stop offset="0" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>';
-  const fig = (F, label) => {
-    let s = '<svg viewBox="' + F.viewBox + '" role="img" aria-label="' + label + ' body map">' + defs;
-    s += F.outline.map(d => '<path class="sil" d="' + d + '"/>').join('');
-    for (const n of F.nerves) {
-      const live = n.keys.some(k => bmSets[k]);
-      s += '<polyline class="nerve' + (live ? ' live' : '') + '" points="' + n.pts.map(p => p.join(',')).join(' ') + '"/>';
-      for (const p of n.pts.slice(1, -1)) s += '<circle class="node' + (live ? ' live' : '') + '" cx="' + p[0] + '" cy="' + p[1] + '" r="7"/>';
-    }
-    for (const m of F.muscles) {
-      if (!bmNames[m.key]) bmNames[m.key] = m.name;
-      const n = bmSets[m.key] || 0, lit = n > 0, op = lit ? Math.min(1, 0.55 + n / 20) : 0, d = m.d.join(' ');
-      if (lit) s += '<path class="glow' + (anyLit ? ' pulse' : '') + '" d="' + d + '" style="opacity:' + (op * 0.6).toFixed(2) + '"/>';
-      s += '<path class="mu' + (lit ? ' lit' : '') + '" d="' + d + '" data-bm="' + m.key + '"' + (lit ? ' style="fill-opacity:' + op.toFixed(2) + '"' : '') + '><title>' + m.name + (lit ? ' · ' + n + ' sets this week' : ' · not trained this week') + '</title></path>';
-      s += '<path class="fib" d="' + d + '" fill="url(#bmfib' + (lit ? 'l' : '') + ')"/><path class="fib" d="' + d + '" fill="url(#bmsheen)"/>';
-    }
-    const vb = F.viewBox.split(' ').map(Number); s += '<text class="lab" x="' + (vb[0] + vb[2] / 2) + '" y="' + (vb[1] + vb[3] - 8) + '" text-anchor="middle">' + label + '</text></svg>';
-    return s;
-  };
-  return '<div class="bodymap">' + fig(A.front, 'Front') + fig(A.back, 'Back') + '</div>' +
-    '<div class="bm-legend"><span><i style="background:var(--gr);box-shadow:0 0 6px var(--gr)"></i>Trained · brighter = more sets</span><span><i style="background:#18222C;box-shadow:inset 0 0 0 1px rgba(62,230,255,.4)"></i>Not yet this week</span></div>';
+  const rank = currentRank(), sex = P().sex === 'f' ? 'f' : 'm';
+  return '<div class="bm-hud"><span>Status · <b>' + esc(P().name || 'Hunter') + '</b></span><span>Rank <b>' + rank + '</b></span></div>' +
+    '<div class="bodymap">' + charSVG(sex, 'front', { lit: bmSets, rank, id: 'bm-f', label: 'Front', tap: true }) + charSVG(sex, 'back', { lit: bmSets, rank, id: 'bm-b', label: 'Back', tap: true }) + '</div>' +
+    '<div class="bm-legend"><span><i style="background:var(--gr);box-shadow:0 0 6px var(--gr)"></i>Trained · brighter = more sets</span><span><i style="background:#18222C;box-shadow:inset 0 0 0 1px rgba(62,230,255,.4)"></i>Not yet this week</span><span><i style="background:#6A4BFF;box-shadow:0 0 6px #6A4BFF"></i>Aura grows with your rank</span></div>';
 }
 function viewProgress() {
   const an = analyses(), list = Object.values(an).sort((a, b) => b.current - a.current);
@@ -1464,28 +1624,52 @@ function unitText(t) {
 let persistState = null, installEvt = null, showData = false;
 function isStandalone() { try { return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { return false; } }
 function installCard() {
-  if (isStandalone() || !installEvt) return '';
+  if (isStandalone() || !installEvt || isIOS()) return '';
   return '<div class="card quest" style="border-left-color:var(--cy)"><div class="row"><div class="grow"><div class="kicker">Install</div><div style="font-weight:600;margin-top:2px">Put Arise on your home screen</div><div class="small muted">Full screen, works offline, and your log is protected.</div></div><button class="btn primary sm" id="home-install">Install</button></div></div>';
+}
+// iPhone: Safari has no install button, and can clear a website's data after about a week without a visit
+function isIOS() { const ua = navigator.userAgent || ''; return /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+const SHARE_ICON = '<svg class="share-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M6 11v9h12v-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function iosCard(where) {
+  if (!isIOS() || isStandalone()) return '';
+  if (where === 'home' && (state.hints.iosLater || 0) > Date.now()) return '';
+  return '<div class="card quest" id="ios-card-' + where + '" style="border-left-color:var(--cy)"><div class="kicker">iPhone</div><div style="font-weight:600;margin-top:2px">Add Arise to your Home Screen</div>' +
+    '<div class="small muted" style="margin-top:4px;line-height:1.5">In Safari, tap <b class="cy">Share</b> ' + SHARE_ICON + ' then <b class="cy">Add to Home Screen</b>. Until you do, Safari can erase your log after about a week without a visit.</div>' +
+    (where === 'home' ? '<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost sm" id="ios-later">Later</button></div>' : '') + '</div>';
+}
+// with no account, the log lives only on this phone: nudge a backup file every 30 days once there is something to lose
+function backupCard() {
+  const h = state.hints, now = Date.now();
+  if (state.sessions.length < 10 || now - (h.lastExport || 0) < 30 * DAY || (h.backupLater || 0) > now) return '';
+  return '<div class="card quest" id="backup-card" style="border-left-color:var(--cy)"><div class="kicker">Backup</div><div style="font-weight:600;margin-top:2px">Your log lives only on this phone</div>' +
+    '<div class="small muted" style="margin-top:2px">Save a backup file so a lost or reset phone does not take your ' + state.sessions.length + ' workouts with it.' + (h.lastExport ? ' Last backup ' + C.fmtDate(h.lastExport) + '.' : '') + '</div>' +
+    '<div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost sm" id="backup-later">Later</button><button class="btn primary sm" id="backup-now">Export backup</button></div></div>';
+}
+function exportBackup() {
+  const blob = new Blob([JSON.stringify({ app: 'arise', version: 1, exportedAt: new Date().toISOString(), data: state }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arise-backup-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  state.hints.lastExport = Date.now(); save();
+  toast('Backup saved. Keep the file somewhere safe, like cloud storage or email.');
 }
 async function doInstall() { if (!installEvt) return; const ev = installEvt; ev.prompt(); try { await ev.userChoice; } catch (e) {} installEvt = null; render(); }
 function viewProfile() {
   const p = P(), L = C.levelFromXp(state.game.xp);
-  const sealedSet = new Set(unseenIds()), earnedT = T.TITLES.filter(t => state.game.achievements[t.id]);
+  const sealedSet = new Set(unseenIds()), earnedT = TS().TITLES.filter(t => state.game.achievements[t.id]);
   const latest = earnedT.filter(t => !sealedSet.has(t.id)).sort((a, b) => state.game.achievements[b.id] - state.game.achievements[a.id]).slice(0, 5);
   const emb = (t, o) => window.ARISE_SYSTEM ? window.ARISE_SYSTEM.emblem(t, Object.assign({ mini: true }, o)) : '';
   return '<div class="top"><h1>Profile</h1><span class="kicker">Rank ' + currentRank() + ' · Lv ' + L.level + '</span></div>' +
     '<div class="card"><label class="field"><span>Hunter name</span><input class="in" id="p-name" maxlength="24" value="' + esc(p.name || '') + '" placeholder="Hunter"></label>' +
     '<div class="row" style="gap:12px"><label class="field grow"><span>Bodyweight (' + U() + ')</span><input class="in num" id="p-bw" type="number" inputmode="decimal" step="any" value="' + fromLb(p.bodyweight) + '"></label><label class="field grow"><span>Age</span><input class="in num" id="p-age" type="number" inputmode="numeric" value="' + esc(p.age) + '"></label></div>' +
-    '<div class="row" style="gap:12px"><div class="field grow"><label>Units</label><div class="seg" id="p-units"><button data-v="lb" class="' + (p.units === 'lb' ? 'on' : '') + '">lb</button><button data-v="kg" class="' + (p.units === 'kg' ? 'on' : '') + '">kg</button></div></div><div class="field grow"><label>Sex (for standards)</label><div class="seg" id="p-sex"><button data-v="m" class="' + (p.sex === 'm' ? 'on' : '') + '">Male</button><button data-v="f" class="' + (p.sex === 'f' ? 'on' : '') + '">Female</button></div></div></div>' +
+    '<div class="row" style="gap:12px"><div class="field grow"><label>Units</label><div class="seg" id="p-units"><button data-v="lb" class="' + (p.units === 'lb' ? 'on' : '') + '">lb</button><button data-v="kg" class="' + (p.units === 'kg' ? 'on' : '') + '">kg</button></div></div><div class="field grow"><label>Character · standards</label><div class="seg" id="p-sex"><button data-v="m" class="' + (p.sex === 'm' ? 'on' : '') + '">Male</button><button data-v="f" class="' + (p.sex === 'f' ? 'on' : '') + '">Female</button></div></div></div>' +
     '<div class="row" style="gap:12px"><label class="field grow"><span>Default rest (s)</span><input class="in num" id="p-rest" type="number" inputmode="numeric" value="' + esc(p.defaultRest) + '"></label><label class="field grow"><span>Sessions / week goal</span><input class="in num" id="p-week" type="number" inputmode="numeric" value="' + esc(p.weeklyTarget) + '"></label></div>' +
     '<div class="field"><label>Keep screen on during workouts</label><div class="seg" id="p-awake"><button data-v="1" class="' + (p.keepAwake ? 'on' : '') + '">On</button><button data-v="0" class="' + (!p.keepAwake ? 'on' : '') + '">Off</button></div></div>' +
     '<div class="field"><label>Sound effects (title reveals and rank-ups)</label><div class="row" style="gap:8px"><div class="seg grow" id="p-sound"><button data-v="1" class="' + (p.sound !== false ? 'on' : '') + '">On</button><button data-v="0" class="' + (p.sound === false ? 'on' : '') + '">Off</button></div><button class="btn ghost sm" id="p-sound-test" style="min-height:48px">Test</button></div></div>' +
     '<div class="row"><span class="small grow ' + (p.notify === 'granted' ? 'muted' : 'dim') + '">Rest-over notifications: ' + (p.notify === 'granted' ? 'on' : p.notify === 'denied' ? 'off' : 'you will be asked on your first rest') + '. Best effort when the screen is off.</span>' + (p.notify !== 'granted' && 'Notification' in window ? '<button class="btn ghost sm" id="p-notify">Enable</button>' : '') + '</div></div>' +
     '<div class="card"><div class="row"><div class="grow"><div class="kicker">Rank card</div><div class="small muted" style="margin-top:2px">Your rank, level, streak and top lifts as an image to share.</div></div><button class="btn primary sm" id="p-card">Make card</button></div></div>' +
-    '<button class="card' + (sealedSet.size ? ' sysnote-ring' : '') + '" id="p-titles" style="width:100%;text-align:left"><div class="row"><div class="grow"><div class="kicker">Titles · ' + earnedT.length + '/' + T.TITLES.length + (sealedSet.size ? ' · <span class="cy">' + sealedSet.size + ' sealed</span>' : '') + '</div>' +
-      (latest.length ? '<div class="tsum">' + latest.map(t => emb(t)).join('') + '</div>' : '<div class="small muted" style="margin-top:4px">Earn titles by training. ' + T.TITLES.length + ' to find.</div>') + '</div><span class="cy" style="font-weight:600">View all</span></div></button>' +
+    '<button class="card' + (sealedSet.size ? ' sysnote-ring' : '') + '" id="p-titles" style="width:100%;text-align:left"><div class="row"><div class="grow"><div class="kicker">Titles · ' + earnedT.length + '/' + TS().TITLES.length + (sealedSet.size ? ' · <span class="cy">' + sealedSet.size + ' sealed</span>' : '') + '</div>' +
+      (latest.length ? '<div class="tsum">' + latest.map(t => emb(t)).join('') + '</div>' : '<div class="small muted" style="margin-top:4px">Earn titles by training. ' + TS().TITLES.length + ' to find.</div>') + '</div><span class="cy" style="font-weight:600">View all</span></div></button>' +
     (installEvt && !isStandalone() ? '<button class="btn primary full" id="p-install" style="margin-bottom:12px">Install app</button>' : '') +
-    '<div class="card" style="padding:0"><button class="lrow" id="p-data-toggle" style="width:100%;padding:10px 16px;text-align:left"><div class="grow"><div class="t">Backup &amp; data</div><div class="s">' + state.sessions.length + ' workouts · ' + state.routines.length + ' routines' + (saveErr ? ' · <span class="rd">last save failed</span>' : '') + '</div></div><span class="dim" style="transform:rotate(' + (showData ? '90' : '0') + 'deg);display:inline-block;transition:transform var(--t)">' + icon('back').replace('M15 5l-7 7 7 7', 'M9 5l7 7-7 7') + '</span></button>' +
+    iosCard('profile') + '<div class="card" style="padding:0"><button class="lrow" id="p-data-toggle" style="width:100%;padding:10px 16px;text-align:left"><div class="grow"><div class="t">Backup &amp; data</div><div class="s">' + state.sessions.length + ' workouts · ' + state.routines.length + ' routines' + (saveErr ? ' · <span class="rd">last save failed</span>' : '') + '</div></div><span class="dim" style="transform:rotate(' + (showData ? '90' : '0') + 'deg);display:inline-block;transition:transform var(--t)">' + icon('back').replace('M15 5l-7 7 7 7', 'M9 5l7 7-7 7') + '</span></button>' +
     (showData ? '<div style="padding:4px 16px 16px">' +
       '<p class="small dim" style="margin-bottom:12px">' + (isStandalone() ? 'Your log lives on this device' + (persistState === true ? ' and is protected from cleanup.' : '.') : 'Running in the browser. Install the app for protected storage.') + ' There is no account and nothing is uploaded, so a backup file is the only copy outside this phone.</p>' +
       '<div class="row"><button class="btn ghost grow" id="p-export">Export backup</button><button class="btn ghost grow" id="p-import">Import backup</button><input type="file" id="p-file" accept="application/json,.json" hidden></div>' +
@@ -1511,12 +1695,12 @@ function viewTitles() {
   const show = t => titleFilter === 'all' || (titleFilter === 'earned' ? got(t) : titleFilter === 'locked' ? !got(t) : t.grade === titleFilter);
   const chips = [['all', 'All'], ['earned', 'Earned'], ['locked', 'Locked'], ['common', 'Common'], ['rare', 'Rare'], ['epic', 'Epic'], ['legendary', 'Legendary']]
     .map(c => '<button class="chip' + (titleFilter === c[0] ? ' on' : '') + '" data-tf="' + c[0] + '">' + c[1] + '</button>').join('');
-  let html = '<div class="top"><button class="icon-btn" id="t-back" aria-label="Back">' + icon('back') + '</button><h1 class="grow">Titles</h1><span class="kicker" id="t-count">' + T.TITLES.filter(got).length + '/' + T.TITLES.length + '</span></div>' +
+  let html = '<div class="top"><button class="icon-btn" id="t-back" aria-label="Back">' + icon('back') + '</button><h1 class="grow">Titles</h1><span class="kicker" id="t-count">' + TS().TITLES.filter(got).length + '/' + TS().TITLES.length + '</span></div>' +
     '<div class="chips" id="t-chips">' + chips + '</div>' +
     (sealedSet.size ? '<button class="sysnote live" id="t-open"><span class="bang">!</span><span><b>System notification</b><span class="small muted">' + (sealedSet.size === 1 ? 'One title is sealed.' : sealedSet.size + ' titles are sealed.') + '</span></span><span class="go">OPEN</span></button>' : '');
   let any = false;
   for (const [cat, catName] of T.CATS) {
-    const all = T.TITLES.filter(t => t.cat === cat), list = all.filter(show); if (!list.length) continue; any = true;
+    const all = TS().TITLES.filter(t => t.cat === cat), list = all.filter(show); if (!list.length) continue; any = true;
     html += '<div class="tcat"><b>' + esc(catName) + '</b><span class="small dim mono">' + all.filter(got).length + '/' + all.length + '</span></div>';
     for (const t of list) {
       const have = got(t), sealed = sealedSet.has(t.id), grade = t.grade[0].toUpperCase() + t.grade.slice(1);
@@ -1535,7 +1719,7 @@ function bindTitles() {
   $$('#t-chips [data-tf]').forEach(b => b.onclick = () => { titleFilter = b.dataset.tf; render(); });
   const op = $('#t-open'); if (op) op.onclick = () => revealTitles(unseenIds());
   $$('[data-ach]').forEach(b => b.onclick = () => {
-    const id = b.dataset.ach, t = T.BY_ID[id], un = unseenIds();
+    const id = b.dataset.ach, t = TS().BY_ID[id], un = unseenIds();
     if (un.includes(id)) revealTitles([id]);
     else if (state.game.achievements[id]) revealTitles([id], true);
     else toast('Locked · ' + unitText(t.desc));
@@ -1552,14 +1736,11 @@ function bindProfile() {
   $$('#p-awake button').forEach(b => b.onclick = () => { P().keepAwake = b.dataset.v === '1'; save(); render(); if (!P().keepAwake) releaseWake(); });
   const nb = $('#p-notify'); if (nb) nb.onclick = async () => { P().notify = 'unasked'; await ensureNotify(); render(); };
   $('#p-card').onclick = rankCard;
-  $$('#p-sex button').forEach(b => b.onclick = () => { P().sex = b.dataset.v; invalidate(); save(); render(); });
+  $$('#p-sex button').forEach(b => b.onclick = () => { P().sex = b.dataset.v; invalidate(); checkAchievements(); save(); render(); });   // titles follow the character's targets
   const ib = $('#p-install'); if (ib) ib.onclick = doInstall;
   $('#p-data-toggle').onclick = () => { showData = !showData; render(); };
   if (!showData) return;
-  $('#p-export').onclick = () => {
-    const blob = new Blob([JSON.stringify({ app: 'arise', version: 1, exportedAt: new Date().toISOString(), data: state }, null, 1)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arise-backup-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-  };
+  $('#p-export').onclick = exportBackup;
   $('#p-import').onclick = () => $('#p-file').click();
   $('#p-file').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -1623,6 +1804,9 @@ function afterRender() {
     $$('[data-start-routine]').forEach(el => el.onclick = () => startWorkout(state.routines.find(r => r.id === el.dataset.startRoutine)));
     const sh = $('#see-history'); if (sh) sh.onclick = () => { sub = { view: 'history' }; render(); };
     const hi = $('#home-install'); if (hi) hi.onclick = doInstall;
+    const il = $('#ios-later'); if (il) il.onclick = () => { state.hints.iosLater = Date.now() + 14 * DAY; save(); render(); };
+    const bn = $('#backup-now'); if (bn) bn.onclick = () => { exportBackup(); render(); };
+    const bl = $('#backup-later'); if (bl) bl.onclick = () => { state.hints.backupLater = Date.now() + 14 * DAY; save(); render(); toast('Backup reminder snoozed for two weeks.'); };
     const ts = $('#today-start'); if (ts) ts.onclick = e => { e.stopPropagation(); const pr = plannedRoutine(todayKey()); if (pr) startWorkout(pr.r); };
     const hs = $('#home-strip'); if (hs) hs.onclick = () => setTab('calendar');
     const hp = $('#home-plan'); if (hp) hp.onclick = () => setTab('calendar');
@@ -1725,7 +1909,7 @@ function seedDemo() {
     { id: 'demoA', name: 'Upper A', items: [{ exId: 'bb_bench', sets: 3, reps: 6, restSec: 150 }, { exId: 'bb_ohp', sets: 3, reps: 6, restSec: 120 }, { exId: 'bw_pullup', sets: 3, reps: 8, restSec: 120 }] },
     { id: 'demoB', name: 'Lower A', items: [{ exId: 'bb_squat', sets: 3, reps: 8, restSec: 180 }, { exId: 'bb_rdl', sets: 3, reps: 8, restSec: 150 }] },
   ];
-  state.game.xp = 2600; state.profile.name = 'Sung';
+  state.game.xp = 2600; state.profile.name = 'Sung'; state.profile.setupDone = true;
   invalidate(); checkAchievements(); state.game.achVersion = TITLES_VERSION;
   state.game.unseen = location.search.includes('sealedall') ? state.game.unseen : location.search.includes('sealed') ? state.game.unseen.slice(0, 2) : [];
   state.game.rank = currentRank(); save();

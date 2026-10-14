@@ -4,6 +4,10 @@
 
 https://github.com/Jsplice/MuscleMap
 
+Male and female figures, front and back, from the `@musclemap/assets` 1.1.0 package. The female figure's proportions
+are adjusted with a smooth reshape of the traced paths (`tools/build-anatomy.js`); the styling (aura, eyes, summoning
+circle) is drawn by Arise on top of the paths.
+
 MIT License
 
 Copyright (c) 2026 Jsplice / MuscleMap contributors

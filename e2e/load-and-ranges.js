@@ -3,7 +3,8 @@
 const path = require('path');
 module.exports = async (ctx) => {
   const { evalFn, shot, sleep } = ctx;
-  const { check, click, type, txt, st, dismissNotify, done, SHOTS } = require('./lib')(ctx);
+  const { check, click, type, txt, st, dismissNotify, doSetup, done, SHOTS } = require('./lib')(ctx);
+  check('a fresh install opens on the setup screen, and it can be finished', await doSetup());
   await click('[data-tab="routines"]');
   await click('[data-program="pplp"]'); await sleep(200);
   await click('#modal .acts button.primary'); await sleep(300);

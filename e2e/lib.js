@@ -23,6 +23,16 @@ module.exports = ({ evalFn, sleep }) => {
     }
     await sleep(150);
   };
+  // A fresh install opens on the first-run setup: get through it (returns false when it was not showing).
+  const doSetup = async (o = {}) => {
+    if (!(await has('.setup'))) return false;
+    await type('#su-name', o.name || 'Tester'); await click('#su-next');
+    await click('[data-su-sex="' + (o.sex || 'm') + '"]'); await click('#su-next');
+    await type('#su-bw', o.bw || 180); await type('#su-age', o.age || 30);
+    await click('#su-finish'); await sleep(300);
+    await evalFn(`(() => { const a = document.querySelector('.arise-fx'); if (a) a.click(); })()`); await sleep(600);
+    return true;
+  };
   const done = (label) => console.log(fails ? `\n${fails} ${label} CHECKS FAILED` : `\nall ${label} checks passed`);
-  return { check, click, type, txt, has, st, modalOpen, dismissNotify, sysOpen, clearSystem, done, SHOTS, get fails() { return fails; } };
+  return { check, click, type, txt, has, st, modalOpen, dismissNotify, sysOpen, clearSystem, doSetup, done, SHOTS, get fails() { return fails; } };
 };
