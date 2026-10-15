@@ -419,6 +419,9 @@
     if (max >= 2) return 'C';
     return 'D';
   }
+  // the character's body grows with rank: lean at E and D, athletic at C and B, powerful at A and S
+  const BUILD_BY_RANK = { E: 'lean', D: 'lean', C: 'athletic', B: 'athletic', A: 'powerful', S: 'powerful' };
+  function buildFor(rank) { return BUILD_BY_RANK[rank] || 'lean'; }
   // lifts: [{exId, name, current, tier, std, base?, words?}]. current is the e1RM in the logged unit (total load for
   // bodyweight lifts, where base is the bodyweight part). Returns the closest concrete target for the next rank.
   function rankNext(lifts, bodyweight, sex, age) {
@@ -566,7 +569,7 @@
     DAY, EX, PROGRAMS, GROUPS, STDS, PCTS, TIERS, TIER_SHORT, CAT_NAMES, LOWER_CATS,
     epley, isRough, round5, setLoad, setE1RM, history, analyze, stall, percentile, ageMult, ordinal,
     readout, median, XP, RANKS, xpForLevel, levelFromXp, startOfWeek, streak, sessionVolume, fmtDate,
-    RANK_ORDER, RANK_RULES, rankFor, rankNext, dailyQuest, questDone, monthKey,
+    RANK_ORDER, RANK_RULES, rankFor, buildFor, rankNext, dailyQuest, questDone, monthKey,
     loadMode, loadMult, loadWords, loadTag, loadStep, thresholds, popEstimate, lifterShare,
     dateKey, keyDate, addDays, dowOf, plannedFor, sessionsByDay, dayStatus, monthGrid, fillRotation, planStats,
   };

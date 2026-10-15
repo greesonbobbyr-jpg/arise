@@ -12,6 +12,9 @@ module.exports = async (ctx) => {
   const line = await txt('.bm-aura');
   check('progress line counts regions and names what is missing', /Shadow aura · \d+ \/ 16 trained this week/.test(line) && /Missing: .*Calves/.test(line), line);
   check('legend explains the reward', /Aura: train every muscle in a week/.test(await txt('.bm-legend')));
+  const rank = ((await txt('.bm-hud')).match(/Rank ([EDCBAS])/) || [])[1], build = { E: 'lean', D: 'lean', C: 'athletic', B: 'athletic', A: 'powerful', S: 'powerful' }[rank];
+  check('the body shown matches the Hunter rank', (await evalFn(`[...document.querySelectorAll('.bodymap .char')].map(c => c.dataset.build).join()`)) === build + ',' + build, rank + ' ' + build);
+  check('trained muscles are lit, with a glow', (await evalFn(`document.querySelectorAll('.bodymap .halo').length`)) >= 1 &&(await evalFn(`document.querySelectorAll('.bodymap .mu.lit').length`)) > 0);
 
   // --- everything but calves this week, then a calf workout completes it
   await evalFn(`(() => {

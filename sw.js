@@ -2,7 +2,7 @@
    Strategy: NETWORK FIRST for the app's own files, so every open shows the latest deploy.
    The cache is only used when the network is down or takes longer than NET_TIMEOUT.
    Fetches bypass the HTTP cache so a fresh deploy is never masked by a stale 10-minute copy. */
-const VERSION = 'arise-v18';
+const VERSION = 'arise-v19';
 const NET_TIMEOUT = 3500; // ms before we give up on the network and serve the cached copy
 const SHELL = [
   './',
@@ -11,7 +11,19 @@ const SHELL = [
   './core.js',
   './titles.js',
   './qr.js',
-  './anatomy.js',
+  './characters.js',
+  './art/chars/m-lean-front.webp',
+  './art/chars/m-lean-back.webp',
+  './art/chars/m-athletic-front.webp',
+  './art/chars/m-athletic-back.webp',
+  './art/chars/m-powerful-front.webp',
+  './art/chars/m-powerful-back.webp',
+  './art/chars/f-lean-front.webp',
+  './art/chars/f-lean-back.webp',
+  './art/chars/f-athletic-front.webp',
+  './art/chars/f-athletic-back.webp',
+  './art/chars/f-powerful-front.webp',
+  './art/chars/f-powerful-back.webp',
   './sfx.js',
   './system.js',
   './manifest.json',

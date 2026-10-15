@@ -459,25 +459,28 @@ console.log('\nShadow aura (reward for a full-body week)');
   eq('every region has a display name', C.AURA_REGIONS.every(k => C.AURA_NAMES[k]), true);
 }
 
-console.log('\nCharacters (anatomy.js)');
+console.log('\nCharacters (characters.js)');
 {
-  const src = require('fs').readFileSync(require('path').join(__dirname, 'anatomy.js'), 'utf8');
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'characters.js'), 'utf8');
   const A = JSON.parse(src.slice(src.indexOf('{'), src.lastIndexOf('}') + 1));
-  const KEYS = new Set(['traps', 'chest', 'delts', 'biceps', 'triceps', 'forearms', 'obliques', 'abs', 'glutes', 'quads', 'calves', 'adductors', 'rhomboids', 'lats', 'erectors', 'hams']);
-  for (const sex of ['m', 'f']) for (const v of ['front', 'back']) {
-    const F = A[sex] && A[sex][v];
-    eq(sex + ' ' + v + ': present with outline, muscles, nerves, feet line', !!(F && F.outline.length && F.muscles.length >= 26 && F.nerves.length === 5 && F.feet > 1000), true);
-    eq(sex + ' ' + v + ': every muscle maps to a body-map key', F.muscles.every(m => KEYS.has(m.key) && m.d.length && /^M/.test(m.d[0])), true);
-    eq(sex + ' ' + v + ': eyes on the front view only', v === 'front' ? !!(F.eye && F.eye.y > 60 && F.eye.y < 260 && F.eye.w > 80) : !F.eye, true);
+  const BUILDS = ['lean', 'athletic', 'powerful'], KEYS = new Set(C.AURA_REGIONS);
+  const inside = (F, d) => /^M\d+ \d+( L\d+ \d+){2,} Z$/.test(d) && d.match(/\d+ \d+/g).every(p => { const [x, y] = p.split(' ').map(Number); return x <= F.w && y <= F.h; });
+  for (const sex of ['m', 'f']) for (const b of BUILDS) {
+    const seen = new Set();
+    for (const v of ['front', 'back']) {
+      const F = A[sex] && A[sex][b] && A[sex][b][v], t = sex + ' ' + b + ' ' + v + ': ';
+      eq(t + 'image on disk, canvas size, feet line near the bottom', !!(F && fs.existsSync(path.join(__dirname, F.img)) && F.w > 250 && F.h > 900 && F.feet > 0.92 * F.h && F.feet <= F.h), true);
+      eq(t + 'every muscle shape belongs to a body-map region and is a closed path on the canvas', F.regions.length >= 20 && F.regions.every(([k, d]) => KEYS.has(k) && inside(F, d)), true);
+      F.regions.forEach(([k]) => seen.add(k));
+    }
+    eq(sex + ' ' + b + ': every muscle shows in the front or the back view', C.AURA_REGIONS.filter(k => !seen.has(k)).join(), '');
   }
-  // the male figure is the one the app always showed: same counts, same first path
-  eq('male figure unchanged (26 front / 30 back muscles)', A.m.front.muscles.length + '/' + A.m.back.muscles.length, '26/30');
-  eq('male front outline starts where it always did', A.m.front.outline[0].slice(0, 20), 'M512 70C511 70 509 7');
-  eq('female figure is its own data', A.f.front.outline[0] !== A.m.front.outline[0] && A.f.front.viewBox !== A.m.front.viewBox, true);
-  // reshaped: the female waist is narrower than her hips (outline width at the obliques vs the upper thighs)
-  const span = (F, key) => { const n = F.muscles.filter(m => m.key === key).flatMap(m => m.d[0].match(/-?\d+/g).map(Number)); let x0 = 1e9, x1 = -1e9; for (let i = 0; i < n.length; i += 2) { x0 = Math.min(x0, n[i]); x1 = Math.max(x1, n[i]); } return x1 - x0; };
-  eq('female back: waist (obliques) narrower than hips (glutes)', span(A.f.back, 'obliques') < span(A.f.back, 'glutes'), true);
-  eq('female hips wider relative to waist than male', span(A.f.back, 'glutes') / span(A.f.back, 'obliques') > span(A.m.back, 'glutes') / span(A.m.back, 'obliques'), true);
+  const front = k => (sx, b) => A[sx][b].front.regions.some(r => r[0] === k), back = k => (sx, b) => A[sx][b].back.regions.some(r => r[0] === k);
+  eq('chest, abs and biceps on the front; lats, rhomboids, lower back and hamstrings on the back', ['m', 'f'].every(sx => BUILDS.every(b => ['chest', 'abs', 'biceps'].every(k => front(k)(sx, b)) && ['lats', 'rhomboids', 'erectors', 'hams'].every(k => back(k)(sx, b)))), true);
+  eq('the three builds share one canvas, so the figure does not jump when the body grows', ['m', 'f'].every(sx => ['front', 'back'].every(v => new Set(BUILDS.map(b => A[sx][b][v].w + 'x' + A[sx][b][v].h)).size === 1)), true);
+  eq('build by Hunter rank (E D C B A S)', C.RANK_ORDER.map(C.buildFor).join(), 'lean,lean,athletic,athletic,powerful,powerful');
+  eq('no rank yet → lean', C.buildFor(undefined), 'lean');
 }
 
 console.log('\nTitles for women');

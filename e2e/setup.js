@@ -18,7 +18,7 @@ module.exports = async (ctx) => {
   check('continue waits for a choice', await evalFn(`document.querySelector('#su-next').disabled`));
   await click('[data-su-sex="f"]'); await sleep(200);
   check('choosing Female marks it; no aura yet (it is earned by training every muscle)', (await has('.su-pick.on[data-su-sex="f"]')) && !(await has('.su-pick .aura')));
-  check('both characters have glowing eyes', (await evalFn(`document.querySelectorAll('.su-pick .eye').length`)) === 4);
+  check('both are the illustrated hunters at their starting build', (await evalFn(`[...document.querySelectorAll('.su-pick .char')].map(c => c.dataset.build + ':' + /-lean-front\\.webp$/.test(c.querySelector('image').getAttribute('href'))).join()`)) === 'lean:true,lean:true');
   await shot(P('setup-2-character.png'));
   await click('#su-next');
 
@@ -38,7 +38,7 @@ module.exports = async (ctx) => {
   await click('#su-finish'); await sleep(700);
 
   // --- ARISE
-  check('ARISE moment plays with the chosen character fully lit', (await has('.arise-fx')) && /ARISE/.test(await txt('.arise-fx .ar-t')) && (await evalFn(`document.querySelector('.arise-fx .char').dataset.sex`)) === 'f' && (await evalFn(`document.querySelectorAll('.arise-fx .mu.lit').length`)) > 10);
+  check('ARISE moment plays with the chosen character fully lit', (await has('.arise-fx')) && /ARISE/.test(await txt('.arise-fx .ar-t')) && (await evalFn(`document.querySelector('.arise-fx .char').dataset.sex`)) === 'f' && (await evalFn(`document.querySelectorAll('.arise-fx .mu.lit').length === window.ARISE_CHARS.f.lean.front.regions.length`)) && (await has('.arise-fx .aura')));
   await shot(P('setup-4-arise.png'));
   for (let i = 0; i < 12 && (await has('.arise-fx')); i++) await sleep(300);
   check('then Home, with the tab bar back', !(await has('.arise-fx')) && !(await has('.setup')) && (await tabsShown()) && (await has('#start-empty')));
@@ -49,7 +49,8 @@ module.exports = async (ctx) => {
   // --- the female character on Progress
   await click('[data-tab="progress"]'); await sleep(300);
   check('Progress draws the female character, front and back', (await evalFn(`[...document.querySelectorAll('.bodymap .char')].map(c => c.dataset.sex + c.dataset.view).join()`)) === 'ffront,fback');
-  check('front view has eyes and both have a summoning circle; no aura before any training', (await evalFn(`document.querySelectorAll('.bodymap .eye').length`)) === 2 && (await evalFn(`document.querySelectorAll('.bodymap .aura').length`)) === 0 && (await evalFn(`document.querySelectorAll('.bodymap .ring').length`)) === 4);
+  check('both have a summoning circle; nothing lit and no aura before any training', (await evalFn(`document.querySelectorAll('.bodymap .ring').length`)) === 4 && (await evalFn(`document.querySelectorAll('.bodymap .mu.lit, .bodymap .halo, .bodymap .aura').length`)) === 0);
+  check('every muscle can be tapped, front and back', (await evalFn(`document.querySelectorAll('.bodymap [data-bm]').length === window.ARISE_CHARS.f.lean.front.regions.length + window.ARISE_CHARS.f.lean.back.regions.length`)));
   check('a new hunter sees all 16 regions still to train', /0 \/ 16 trained this week/.test(await txt('.bm-aura')), await txt('.bm-aura'));
   check('the status frame shows name and rank', /Status · Rin/.test(await txt('.bm-hud')) && /Rank E/.test(await txt('.bm-hud')), await txt('.bm-hud'));
   await evalFn(`document.querySelector('.bodymap').scrollIntoView({block:'center'})`); await sleep(300);
