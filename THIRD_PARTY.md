@@ -48,6 +48,15 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9098242/
 Percentage of adults meeting the federal muscle-strengthening guideline, by sex and age band. Used only for the
 "estimated against all men/women" line, which is labelled as an estimate in the app. Public domain (US government work).
 
+## qrcode-generator (`qr.js`)
+
+https://github.com/kazuhikoarase/qrcode-generator, Copyright (c) 2009 Kazuhiko Arase, MIT License (the notice is kept at the top of `qr.js`).
+The word "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
+
+## jsQR (test-only, `e2e/vendor/jsQR.js`)
+
+https://github.com/cozmo/jsQR, Apache License 2.0 (`e2e/vendor/jsQR.LICENSE`). Used only by the browser tests to decode the app's QR code; never shipped to users.
+
 ## Fonts
 
 Geist and Geist Mono by Vercel, SIL Open Font License 1.1, served from Google Fonts.

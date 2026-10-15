@@ -17,7 +17,7 @@ module.exports = async (ctx) => {
   check('step 2 shows both characters', /Choose your character/.test(await txt('.setup')) && (await evalFn(`[...document.querySelectorAll('.su-pick .char')].map(c => c.dataset.sex).join()`)) === 'm,f');
   check('continue waits for a choice', await evalFn(`document.querySelector('#su-next').disabled`));
   await click('[data-su-sex="f"]'); await sleep(200);
-  check('choosing Female marks it and powers up its aura', (await has('.su-pick.on[data-su-sex="f"]')) && (await evalFn(`+getComputedStyle(document.querySelector('.su-pick.on .aura')).getPropertyValue('--a') > +getComputedStyle(document.querySelector('.su-pick:not(.on) .aura')).getPropertyValue('--a')`)));
+  check('choosing Female marks it; no aura yet (it is earned by training every muscle)', (await has('.su-pick.on[data-su-sex="f"]')) && !(await has('.su-pick .aura')));
   check('both characters have glowing eyes', (await evalFn(`document.querySelectorAll('.su-pick .eye').length`)) === 4);
   await shot(P('setup-2-character.png'));
   await click('#su-next');
@@ -49,7 +49,8 @@ module.exports = async (ctx) => {
   // --- the female character on Progress
   await click('[data-tab="progress"]'); await sleep(300);
   check('Progress draws the female character, front and back', (await evalFn(`[...document.querySelectorAll('.bodymap .char')].map(c => c.dataset.sex + c.dataset.view).join()`)) === 'ffront,fback');
-  check('front view has eyes, both have an aura and a summoning circle', (await evalFn(`document.querySelectorAll('.bodymap .eye').length`)) === 2 && (await evalFn(`document.querySelectorAll('.bodymap .aura').length`)) === 2 && (await evalFn(`document.querySelectorAll('.bodymap .ring').length`)) === 4);
+  check('front view has eyes and both have a summoning circle; no aura before any training', (await evalFn(`document.querySelectorAll('.bodymap .eye').length`)) === 2 && (await evalFn(`document.querySelectorAll('.bodymap .aura').length`)) === 0 && (await evalFn(`document.querySelectorAll('.bodymap .ring').length`)) === 4);
+  check('a new hunter sees all 16 regions still to train', /0 \/ 16 trained this week/.test(await txt('.bm-aura')), await txt('.bm-aura'));
   check('the status frame shows name and rank', /Status · Rin/.test(await txt('.bm-hud')) && /Rank E/.test(await txt('.bm-hud')), await txt('.bm-hud'));
   await evalFn(`document.querySelector('.bodymap').scrollIntoView({block:'center'})`); await sleep(300);
   await shot(P('setup-5-progress-female.png'));

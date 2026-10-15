@@ -25,6 +25,8 @@ FLOWS=(
   "sound|$B?demo#profile|390|sound"
   "setup|$B|390|setup"
   "women|$B?demo#profile|360|women"
+  "aura|$B?demo#progress|390|aura-share"
+  "q360|$B?demo#profile|360|overflow"
   "s360|$B|360|overflow"
   "c360|$B?demo#calendar|360|overflow"
   "w360|$B?demo&active#workout|360|overflow"

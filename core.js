@@ -552,7 +552,17 @@
     return { plannedDone, perfectWeeks };
   }
 
+  // The shadow aura is the reward for training every muscle region on the body map within a week.
+  // sets: { regionKey: working sets in the last 7 days }  →  { done, total, full, missing: [regionKey] }
+  const AURA_REGIONS = ['traps', 'chest', 'delts', 'biceps', 'triceps', 'forearms', 'obliques', 'abs', 'glutes', 'quads', 'calves', 'adductors', 'rhomboids', 'lats', 'erectors', 'hams'];
+  const AURA_NAMES = { traps: 'Traps', chest: 'Chest', delts: 'Shoulders', biceps: 'Biceps', triceps: 'Triceps', forearms: 'Forearms', obliques: 'Obliques', abs: 'Abs', glutes: 'Glutes', quads: 'Quads', calves: 'Calves', adductors: 'Adductors', rhomboids: 'Rhomboids', lats: 'Lats', erectors: 'Lower back', hams: 'Hamstrings' };
+  function auraStatus(sets) {
+    const missing = AURA_REGIONS.filter(k => !(sets && sets[k] > 0));
+    return { done: AURA_REGIONS.length - missing.length, total: AURA_REGIONS.length, full: missing.length === 0, missing };
+  }
+
   root.ARISE_CORE = {
+    AURA_REGIONS, AURA_NAMES, auraStatus,
     DAY, EX, PROGRAMS, GROUPS, STDS, PCTS, TIERS, TIER_SHORT, CAT_NAMES, LOWER_CATS,
     epley, isRough, round5, setLoad, setE1RM, history, analyze, stall, percentile, ageMult, ordinal,
     readout, median, XP, RANKS, xpForLevel, levelFromXp, startOfWeek, streak, sessionVolume, fmtDate,

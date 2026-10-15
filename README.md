@@ -13,6 +13,7 @@ Personal strength-training PWA. Logs workouts Hevy-style, then tells you in plai
 | `titles.js` | The 125 titles (achievements) as data rows, and the stats they are checked against |
 | `system.js` | The System: notification window, title emblems and reveal effects (canvas and SVG, no assets) |
 | `sfx.js` | Sound effects, synthesized with Web Audio (no audio files) |
+| `qr.js` | QR code generator for the invite panel (qrcode-generator by Kazuhiko Arase, MIT) |
 | `sw.js` | Service worker: precaches the shell so the app opens offline |
 | `manifest.json` | PWA manifest (installable, standalone, dark) |
 | `icons/` | 192, 512 and 512-maskable icons |
@@ -49,7 +50,9 @@ Open `index.html?demo` on a fresh install to seed eight weeks of sample workouts
 There are no accounts. Each person installs Arise on their own phone and their log stays on that phone; nobody sees anyone else's.
 
 - **First-run setup** ("Awakening"): name, choose your character (male or female), bodyweight with lb/kg, age and workouts per week, then an ARISE moment. It only appears when there is no log; anyone with a log or routines from before is treated as set up (`profile.setupDone`). Everything stays editable in Profile, where the Male/Female switch also changes the character, the standards and the title targets.
-- **Characters**: the Progress body map and the setup cards draw the male or female figure. Both have the System look: glowing eyes, a violet shadow aura that grows with Hunter rank (E faint, S strong), a summoning circle and a status frame. Trained muscles light up green. `charSVG(sex, view, opts)` in `index.html` draws one.
+- **Characters**: the Progress body map and the setup cards draw the male or female figure with the System look: glowing eyes, a summoning circle and a status frame. Trained muscles light up green. `charSVG(sex, view, opts)` in `index.html` draws one.
+- **Shadow aura (a reward)**: the violet aura appears only when all 16 body-map regions have been trained in the last 7 days (`C.auraStatus`, `C.AURA_REGIONS` in core.js). Its strength grows with Hunter rank. Progress shows "Shadow aura · 12 / 16 trained this week · Missing: …", and the workout that completes the set plays a one-time AWAKENED moment.
+- **Invite a hunter** (Profile): Share link opens the phone's share sheet (or copies the link), and QR code shows a scannable code for the app's own address, drawn on the phone by `qr.js` (qrcode-generator, MIT). The browser tests decode it with jsQR (test-only, `e2e/vendor/`).
 - **Female figure**: MuscleMap's traced female body, reshaped (narrower neck, shoulders and waist, slimmer arms, softer chest, fuller hips and glutes) by `tools/build-anatomy.js`. To rebuild: `npm pack @musclemap/assets@1.1.0` in an empty folder, extract it, then `node tools/build-anatomy.js <extracted folder>`. The male figure is copied unchanged; `WARP=0` builds the female without the reshape.
 - **Fair titles for women**: same 125 titles, ids and grades. The weight-based ones (`FEMALE` in `titles.js`) get women's targets at about the same percentile among women who lift as the men's targets among men; rep feats count at lighter weights (`FEAT`). `ARISE_TITLES.forSex(sex)` returns the set to use. `node tools/women-titles.js` prints both percentiles for every title; a unit test keeps them within 12 points (the top rungs, where the data runs out, are exempt).
 - **iPhone**: Safari has no install button and can clear a website's data after about a week without a visit, so iPhones that have not added Arise to the Home Screen get a card with the steps (Home, dismissible for 14 days; always in Profile).

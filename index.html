@@ -266,16 +266,28 @@ body.setup-on .tabs,body.setup-on .rest{display:none}
 .su-pick:active{transform:scale(.98)}
 .su-note{font-size:var(--fs-s);color:var(--tx2);line-height:1.45;margin:0 2px 8px}
 .su-err{min-height:20px;color:var(--rd);font-size:var(--fs-s);margin:0 2px 4px}
-.arise-fx{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 55%,rgba(91,59,255,.3),rgba(5,6,10,.97) 62%);animation:arin .35s ease-out}
+.arise-fx{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 50%,rgba(40,24,110,.96),rgba(5,6,10,.985) 66%);animation:arin .35s ease-out}
 .arise-fx .char{width:46vw;max-width:220px;animation:arup 1.9s cubic-bezier(.2,.8,.2,1) both}
 .arise-fx .ar-t{margin-top:4px;font-family:var(--f-num);font-weight:800;font-size:42px;letter-spacing:.42em;padding-left:.42em;color:#F4F0FF;text-shadow:0 0 24px #7B5CFF,0 0 60px #5B3BFF;animation:art 1.9s ease-out both}
-.arise-fx .ar-s{margin-top:10px;font-family:var(--f-num);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#9C8CFF}
+.arise-fx .ar-t.long{font-size:clamp(22px,8.2vw,34px);letter-spacing:.24em;padding-left:.24em;animation-name:artl}
+@keyframes artl{0%{opacity:0;letter-spacing:.6em}50%{opacity:1}100%{letter-spacing:.24em}}
+.arise-fx .ar-s{max-width:min(92vw,420px);text-align:center;line-height:1.6;margin-top:10px;font-family:var(--f-num);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#9C8CFF}
 .arise-fx.out{animation:arout .4s ease-in forwards}
 @keyframes arin{from{opacity:0}}
 @keyframes arout{to{opacity:0}}
 @keyframes arup{0%{opacity:0;transform:translateY(30px) scale(.9)}40%{opacity:1}100%{transform:none}}
 @keyframes art{0%{opacity:0;letter-spacing:1em}50%{opacity:1}100%{letter-spacing:.42em}}
 @media (prefers-reduced-motion:reduce){.setup,.arise-fx,.arise-fx .char,.arise-fx .ar-t{animation:none}}
+.bm-aura{margin:10px 4px 0;text-align:center;font-size:12px;color:var(--tx2);line-height:1.5}
+.bm-aura b{color:#9C8CFF;font-family:var(--f-num);letter-spacing:.12em;text-transform:uppercase;font-size:11px}
+.bm-aura .miss{display:block;color:var(--tx3)}
+.bm-aura.on b{color:#C9BCFF;text-shadow:0 0 12px #6A4BFF}
+.qr-fx{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,6,10,.86);animation:arin .25s ease-out}
+.qr-win{width:100%;max-width:360px;padding:20px 18px 16px;border:1px solid var(--cy-line);border-radius:4px;background:linear-gradient(180deg,rgba(62,230,255,.08),rgba(62,230,255,.02)),var(--bg);box-shadow:0 0 40px -12px rgba(62,230,255,.6)}
+.qr-box{margin:6px auto 12px;width:min(260px,70vw);aspect-ratio:1;padding:6px;border-radius:10px;background:#F2FDFF;box-shadow:0 0 0 1px var(--cy-line),0 0 30px -6px rgba(62,230,255,.7)}
+.qr-box svg{display:block;width:100%;height:100%}
+.qr-url{font-family:var(--f-num);font-size:12px;color:var(--cy);text-align:center;word-break:break-all}
+.qr-hint{font-size:var(--fs-s);color:var(--tx2);text-align:center;margin:6px 0 14px;line-height:1.45}
 .share-i{width:15px;height:15px;vertical-align:-2px;color:var(--cy)}
 .bm-legend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;margin-top:6px;font-size:11px;color:var(--tx3)}
 .bm-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
@@ -445,6 +457,7 @@ body.setup-on .tabs,body.setup-on .rest{display:none}
 <script src="standards.js"></script>
 <script src="core.js"></script>
 <script src="titles.js"></script>
+<script src="qr.js"></script>
 <script>
 (function(){
 'use strict';
@@ -456,7 +469,7 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.11.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
@@ -668,7 +681,7 @@ function viewSetup() {
       '<button class="btn primary su-go" id="su-next">[ CONTINUE ]</button>';
   } else if (su.step === 1) {
     const pick = (sx, label) => '<button class="su-pick' + (su.sex === sx ? ' on' : '') + '" data-su-sex="' + sx + '" aria-pressed="' + (su.sex === sx) + '">' +
-      charSVG(sx, 'front', { lit: SU_LIT, rank: su.sex === sx ? 'B' : 'E', id: 'su-' + sx }) + '<b>' + label + '</b></button>';
+      charSVG(sx, 'front', { lit: SU_LIT, rank: 'E', id: 'su-' + sx }) + '<b>' + label + '</b></button>';
     h += '<h1 class="su-h">Choose your character</h1><div class="su-chars">' + pick('m', 'Male') + pick('f', 'Female') + '</div>' +
       '<p class="su-note">Sets your character and the strength standards you are compared with. You can change it later in Profile.</p>' +
       '<button class="btn primary su-go" id="su-next"' + (su.sex ? '' : ' disabled') + '>[ CONTINUE ]</button><button class="su-back" id="su-back">Back</button>';
@@ -709,11 +722,12 @@ async function finishSetup() {
   tab = 'workout'; sub = null; render(); window.scrollTo(0, 0);
 }
 // the character powers up: every muscle lit, full aura, ARISE
-function ariseMoment(sex) {
+function ariseMoment(sex, words) {
   return new Promise(res => {
-    const all = {}; ['chest', 'delts', 'abs', 'obliques', 'quads', 'adductors', 'glutes', 'biceps', 'triceps', 'forearms', 'calves', 'traps'].forEach(k => all[k] = 8);
+    const all = {}; C.AURA_REGIONS.forEach(k => all[k] = 8);
     const d = document.createElement('div'); d.className = 'arise-fx'; d.setAttribute('role', 'status');
-    d.innerHTML = charSVG(sex, 'front', { lit: all, rank: 'S', id: 'ar' }) + '<div class="ar-t">ARISE</div><div class="ar-s">The System has registered you</div>';
+    const w = words || { title: 'ARISE', sub: 'The System has registered you' };
+    d.innerHTML = charSVG(sex, 'front', { lit: all, rank: 'S', aura: true, id: 'ar' }) + '<div class="ar-t' + (w.title.length > 6 ? ' long' : '') + '">' + esc(w.title) + '</div><div class="ar-s">' + esc(w.sub) + '</div>';
     document.body.appendChild(d);
     try { if (window.ARISE_SFX) window.ARISE_SFX.play('rankup'); } catch (e) {}
     try { if (navigator.vibrate) navigator.vibrate([40, 50, 40, 60, 160]); } catch (e) {}
@@ -978,7 +992,7 @@ async function finishWorkout() {
   const quest = todayQuest();
   const questHit = !quest.done && C.questDone(quest, session, exById[quest.exId], BW(), quest.exId ? allTimeBest(quest.exId) : 0);
   if (questHit) { xp += quest.xp; state.game.quest = { key: quest.key, done: true, date: Date.now() }; state.game.questCount = (state.game.questCount || 0) + 1; }
-  const rankBefore = currentRank(), tiersBefore = tierMap();
+  const rankBefore = currentRank(), tiersBefore = tierMap(), auraBefore = C.auraStatus(weekSets()).full;
   state.sessions.push(session);
   state.game.xp += xp; state.game.prs = (state.game.prs || []).concat(prs);
   for (const e of a.entries) if (e.rest) state.exRest[e.exId] = e.rest;
@@ -1004,6 +1018,7 @@ async function finishWorkout() {
   for (const k in prToasted) delete prToasted[k];
   render();
   if (unseenIds().length) await revealTitles(unseenIds());
+  if (!auraBefore && C.auraStatus(weekSets()).full) await ariseMoment(P().sex, { title: 'AWAKENED', sub: 'Shadow aura · every muscle trained this week' });
   if (C.RANK_ORDER.indexOf(rankAfter) > C.RANK_ORDER.indexOf(rankBefore)) showRankUp(rankAfter, 'Hunter rank ' + rankBefore + ' → ' + rankAfter + '. ' + C.RANK_RULES[rankAfter] + '.');
   else if (tierUps.length) showRankUp(tierUps[0].tier[0], tierUps[0].name + ' is now ' + tierUps[0].tier + (tierUps.length > 1 ? ', and ' + (tierUps.length - 1) + ' more lift' + (tierUps.length > 2 ? 's' : '') + ' moved up.' : '.'), 'Tier up');
 }
@@ -1574,19 +1589,30 @@ function charSVG(sex, view, opts) {
   const cy = ((F.feet - vb[1]) / vb[3] * 100).toFixed(1);   // summoning circle under the feet
   const ring = '<div class="ring" style="top:' + cy + '%"><svg viewBox="-100 -100 200 200" aria-hidden="true"><circle r="92" stroke-width="1.6" stroke-dasharray="2 6" opacity=".7"/><circle r="80" stroke-width="1" opacity=".45"/><circle r="66" stroke-width="3" stroke-dasharray="24 10 4 10" opacity=".55"/></svg></div>' +
     '<div class="ring" style="top:' + cy + '%"><svg class="r2" viewBox="-100 -100 200 200" aria-hidden="true"><circle r="98" stroke-width=".8" stroke-dasharray="40 14" opacity=".35"/><circle r="52" stroke-width="1.2" stroke-dasharray="1 5" opacity=".6"/></svg></div>';
-  return '<div class="char" data-sex="' + (sex === 'f' ? 'f' : 'm') + '" data-view="' + view + '"><div class="stage">' + ring + aura + s + '</div>' + (o.label ? '<div class="lab2">' + o.label + '</div>' : '') + '</div>';
+  return '<div class="char" data-sex="' + (sex === 'f' ? 'f' : 'm') + '" data-view="' + view + '"><div class="stage">' + ring + (o.aura ? aura : '') + s + '</div>' + (o.label ? '<div class="lab2">' + o.label + '</div>' : '') + '</div>';
+}
+// working sets per body-map region over the last 7 days
+function weekSets(now) {
+  const cut = (now || Date.now()) - 7 * DAY, out = {};
+  for (const s of state.sessions) if (s.date >= cut) for (const e of s.entries || []) {
+    const ex = exById[e.exId]; if (!ex) continue; const n = e.sets.filter(x => !x.warmup).length; if (!n) continue;
+    for (const k of (BM_MUSCLE[ex.muscle] || BM_GROUP[ex.group] || [])) out[k] = (out[k] || 0) + n;
+  }
+  return out;
+}
+function auraLine(st) {
+  if (st.full) return '<div class="bm-aura on"><b>Shadow aura awakened</b> · every muscle trained this week</div>';
+  const miss = st.missing.map(k => C.AURA_NAMES[k]);
+  return '<div class="bm-aura"><b>Shadow aura</b> · ' + st.done + ' / ' + st.total + ' trained this week<span class="miss">Missing: ' + esc(miss.slice(0, 6).join(', ') + (miss.length > 6 ? ' and ' + (miss.length - 6) + ' more' : '')) + '</span></div>';
 }
 function bodyMap() {
   if (!window.ARISE_ANATOMY) return '';
-  const cut = Date.now() - 7 * DAY; bmSets = {};
-  for (const s of state.sessions) if (s.date >= cut) for (const e of s.entries || []) {
-    const ex = exById[e.exId]; if (!ex) continue; const n = e.sets.filter(x => !x.warmup).length; if (!n) continue;
-    for (const k of (BM_MUSCLE[ex.muscle] || BM_GROUP[ex.group] || [])) bmSets[k] = (bmSets[k] || 0) + n;
-  }
+  bmSets = weekSets();
+  const st = C.auraStatus(bmSets);
   const rank = currentRank(), sex = P().sex === 'f' ? 'f' : 'm';
   return '<div class="bm-hud"><span>Status · <b>' + esc(P().name || 'Hunter') + '</b></span><span>Rank <b>' + rank + '</b></span></div>' +
-    '<div class="bodymap">' + charSVG(sex, 'front', { lit: bmSets, rank, id: 'bm-f', label: 'Front', tap: true }) + charSVG(sex, 'back', { lit: bmSets, rank, id: 'bm-b', label: 'Back', tap: true }) + '</div>' +
-    '<div class="bm-legend"><span><i style="background:var(--gr);box-shadow:0 0 6px var(--gr)"></i>Trained · brighter = more sets</span><span><i style="background:#18222C;box-shadow:inset 0 0 0 1px rgba(62,230,255,.4)"></i>Not yet this week</span><span><i style="background:#6A4BFF;box-shadow:0 0 6px #6A4BFF"></i>Aura grows with your rank</span></div>';
+    '<div class="bodymap">' + charSVG(sex, 'front', { lit: bmSets, rank, aura: st.full, id: 'bm-f', label: 'Front', tap: true }) + charSVG(sex, 'back', { lit: bmSets, rank, aura: st.full, id: 'bm-b', label: 'Back', tap: true }) + '</div>' + auraLine(st) +
+    '<div class="bm-legend"><span><i style="background:var(--gr);box-shadow:0 0 6px var(--gr)"></i>Trained · brighter = more sets</span><span><i style="background:#18222C;box-shadow:inset 0 0 0 1px rgba(62,230,255,.4)"></i>Not yet this week</span><span><i style="background:#6A4BFF;box-shadow:0 0 6px #6A4BFF"></i>Aura: train every muscle in a week</span></div>';
 }
 function viewProgress() {
   const an = analyses(), list = Object.values(an).sort((a, b) => b.current - a.current);
@@ -1651,6 +1677,36 @@ function exportBackup() {
   state.hints.lastExport = Date.now(); save();
   toast('Backup saved. Keep the file somewhere safe, like cloud storage or email.');
 }
+// ---------- invite: the app's own address, shared or shown as a QR code ----------
+function appUrl() { return location.origin + location.pathname.replace(/index\.html$/, ''); }
+const SHARE_TEXT = 'Train like a Hunter. Arise is a free strength tracker: open the link and add it to your home screen.';
+async function shareApp() {
+  const url = appUrl();
+  if (navigator.share) { try { await navigator.share({ title: 'Arise', text: SHARE_TEXT, url }); } catch (e) {} return; }
+  try { await navigator.clipboard.writeText(url); toast('Link copied. Paste it to a friend.'); }
+  catch (e) { showQR(); }
+}
+// QR as SVG: dark squares on a light panel (every camera reads that), four-module quiet zone
+function qrSVG(text) {
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), m = 4, size = n + m * 2; let d = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z';
+  return '<svg class="qr" viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges" role="img" aria-label="QR code for ' + esc(text) + '"><rect width="' + size + '" height="' + size + '" fill="#F2FDFF"/><path d="' + d + '" fill="#04121A"/></svg>';
+}
+function showQR() {
+  if (document.querySelector('.qr-fx')) return;
+  const url = appUrl(), d = document.createElement('div');
+  d.className = 'qr-fx'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-label', 'Invite a hunter');
+  d.innerHTML = '<div class="qr-win"><div class="su-head"><span class="su-bang">!</span><span class="su-sys">INVITE A HUNTER</span></div>' +
+    '<div class="qr-box">' + (window.qrcode ? qrSVG(url) : '') + '</div>' +
+    '<div class="qr-url">' + esc(url) + '</div><p class="qr-hint">Point a phone camera here. It opens Arise; then add it to the home screen.</p>' +
+    '<div class="row" style="gap:8px"><button class="btn primary grow" id="qr-share">Share link</button><button class="btn ghost grow" id="qr-close">Close</button></div></div>';
+  document.body.appendChild(d);
+  const close = () => d.remove();
+  d.querySelector('#qr-close').onclick = close;
+  d.querySelector('#qr-share').onclick = shareApp;
+  d.onclick = e => { if (e.target === d) close(); };
+}
 async function doInstall() { if (!installEvt) return; const ev = installEvt; ev.prompt(); try { await ev.userChoice; } catch (e) {} installEvt = null; render(); }
 function viewProfile() {
   const p = P(), L = C.levelFromXp(state.game.xp);
@@ -1666,6 +1722,8 @@ function viewProfile() {
     '<div class="field"><label>Sound effects (title reveals and rank-ups)</label><div class="row" style="gap:8px"><div class="seg grow" id="p-sound"><button data-v="1" class="' + (p.sound !== false ? 'on' : '') + '">On</button><button data-v="0" class="' + (p.sound === false ? 'on' : '') + '">Off</button></div><button class="btn ghost sm" id="p-sound-test" style="min-height:48px">Test</button></div></div>' +
     '<div class="row"><span class="small grow ' + (p.notify === 'granted' ? 'muted' : 'dim') + '">Rest-over notifications: ' + (p.notify === 'granted' ? 'on' : p.notify === 'denied' ? 'off' : 'you will be asked on your first rest') + '. Best effort when the screen is off.</span>' + (p.notify !== 'granted' && 'Notification' in window ? '<button class="btn ghost sm" id="p-notify">Enable</button>' : '') + '</div></div>' +
     '<div class="card"><div class="row"><div class="grow"><div class="kicker">Rank card</div><div class="small muted" style="margin-top:2px">Your rank, level, streak and top lifts as an image to share.</div></div><button class="btn primary sm" id="p-card">Make card</button></div></div>' +
+    '<div class="card invite"><div class="kicker">Invite a hunter</div><div class="small muted" style="margin-top:2px">Friends get their own Arise and their own log. Nothing of yours is shared.</div>' +
+    '<div class="row" style="gap:8px;margin-top:10px"><button class="btn primary sm grow" id="p-share">Share link</button><button class="btn ghost sm grow" id="p-qr">QR code</button></div></div>' +
     '<button class="card' + (sealedSet.size ? ' sysnote-ring' : '') + '" id="p-titles" style="width:100%;text-align:left"><div class="row"><div class="grow"><div class="kicker">Titles · ' + earnedT.length + '/' + TS().TITLES.length + (sealedSet.size ? ' · <span class="cy">' + sealedSet.size + ' sealed</span>' : '') + '</div>' +
       (latest.length ? '<div class="tsum">' + latest.map(t => emb(t)).join('') + '</div>' : '<div class="small muted" style="margin-top:4px">Earn titles by training. ' + TS().TITLES.length + ' to find.</div>') + '</div><span class="cy" style="font-weight:600">View all</span></div></button>' +
     (installEvt && !isStandalone() ? '<button class="btn primary full" id="p-install" style="margin-bottom:12px">Install app</button>' : '') +
@@ -1736,6 +1794,8 @@ function bindProfile() {
   $$('#p-awake button').forEach(b => b.onclick = () => { P().keepAwake = b.dataset.v === '1'; save(); render(); if (!P().keepAwake) releaseWake(); });
   const nb = $('#p-notify'); if (nb) nb.onclick = async () => { P().notify = 'unasked'; await ensureNotify(); render(); };
   $('#p-card').onclick = rankCard;
+  $('#p-share').onclick = shareApp;
+  $('#p-qr').onclick = showQR;
   $$('#p-sex button').forEach(b => b.onclick = () => { P().sex = b.dataset.v; invalidate(); checkAchievements(); save(); render(); });   // titles follow the character's targets
   const ib = $('#p-install'); if (ib) ib.onclick = doInstall;
   $('#p-data-toggle').onclick = () => { showData = !showData; render(); };

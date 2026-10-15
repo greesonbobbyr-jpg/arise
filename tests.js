@@ -445,6 +445,20 @@ console.log('\nLibrary and programs');
   eq('rest: heavy compounds ≥150 s, isolation ≤90 s', p.routines.every(r => r.items.every(i => ['bb_bench', 'bb_squat', 'bb_rdl', 'bw_pullup'].includes(i[0]) ? i[4] >= 150 : ['db_incline', 'db_shoulder', 'mc_cs_row', 'mc_leg_press'].includes(i[0]) ? i[4] >= 90 && i[4] <= 120 : i[4] <= 90)), true);
 }
 
+console.log('\nShadow aura (reward for a full-body week)');
+{
+  const all = {}; C.AURA_REGIONS.forEach(k => all[k] = 3);
+  eq('16 regions on the body map', C.AURA_REGIONS.length, 16);
+  eq('every region trained → aura', C.auraStatus(all).full, true);
+  const some = Object.assign({}, all); delete some.calves; some.forearms = 0;
+  const st = C.auraStatus(some);
+  eq('two regions missing → no aura', st.full, false);
+  eq('count of trained regions', st.done + '/' + st.total, '14/16');
+  eq('missing regions named, in body-map order', st.missing.join(), 'forearms,calves');
+  eq('nothing trained → all missing', C.auraStatus({}).missing.length, 16);
+  eq('every region has a display name', C.AURA_REGIONS.every(k => C.AURA_NAMES[k]), true);
+}
+
 console.log('\nCharacters (anatomy.js)');
 {
   const src = require('fs').readFileSync(require('path').join(__dirname, 'anatomy.js'), 'utf8');
