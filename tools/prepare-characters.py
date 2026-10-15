@@ -11,8 +11,8 @@ For each sex, build and view this
   2. finds body landmarks on the silhouette (neck, shoulders, armpits, elbows, wrists, waist, hips, crotch, knees,
      ankles, feet), on the drawing and on the traced muscle template in anatomy.js alike,
   3. moves every template muscle onto the drawing, point by point in body coordinates (see Body below),
-  4. cuts the muscles away from hair, head, hands and feet, and from clothing unless the muscle shows through it (glutes
-     under shorts, a sports top over the chest and upper back),
+  4. grows the muscles over the whole body below the neck (clothes included, so they never show) with a thin seam
+     between neighbours; head, hair, hands and feet stay the drawing's,
   5. writes the cut-out (WebP for the app; PNG, JSON and a labelled overlay in the debug folder) and characters.js.
 """
 import json, os, re, sys
@@ -25,7 +25,7 @@ BUILDS = ['lean', 'athletic', 'powerful']
 REGIONS = ['traps', 'chest', 'delts', 'biceps', 'triceps', 'forearms', 'obliques', 'abs', 'glutes', 'quads', 'calves', 'adductors', 'rhomboids', 'lats', 'erectors', 'hams']
 NAMES = {'traps': 'Traps', 'chest': 'Chest', 'delts': 'Shoulders', 'biceps': 'Biceps', 'triceps': 'Triceps', 'forearms': 'Forearms', 'obliques': 'Obliques', 'abs': 'Abs', 'glutes': 'Glutes', 'quads': 'Quads', 'calves': 'Calves', 'adductors': 'Adductors', 'rhomboids': 'Rhomboids', 'lats': 'Lats', 'erectors': 'Lower back', 'hams': 'Hamstrings'}
 
-# ---------------------------------------------------------------- hair, clothing, silhouette
+# ---------------------------------------------------------------- hair and silhouette
 def runs(row):
     """[(start, end)] of consecutive True pixels in a boolean row."""
     d = np.diff(np.concatenate([[0], row.astype(np.int8), [0]]))
@@ -35,9 +35,11 @@ def hsv_of(rgba):
     hsv = cv2.cvtColor(np.ascontiguousarray(rgba[:, :, :3]), cv2.COLOR_RGB2HSV)
     return [hsv[:, :, i].astype(int) for i in range(3)]
 
-def hair_mask(rgba, sex):
-    """Hair: black for him (only on the head), blonde for her (yellower than skin: skin hue stays under 17 on OpenCV's
-    0..180 scale, blonde sits at 17..40). Her ponytail reaches the shoulder blades, so the search goes lower."""
+def hair_mask(rgba, sex, strands=True):
+    """Hair: black for him (only on the head); blonde for her. Blonde is usually yellower than skin (skin hue stays under
+    17 on OpenCV's 0..180 scale, blonde sits at 17..40), but in some art it is the same hue as the skin, so hair is also
+    where fine strands make the drawing busy. Either way it is one big mass reaching the head; her ponytail reaches the
+    shoulder blades, so the search goes lower."""
     a = rgba[:, :, 3] > 127
     ys = np.nonzero(a)[0]; top, H = ys.min(), ys.max() - ys.min()
     h, s, v = hsv_of(rgba)
@@ -45,51 +47,23 @@ def hair_mask(rgba, sex):
         hair = v < 75; hair[int(top + 0.15 * H):] = False
         hair = cv2.morphologyEx((hair & a).astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         return (cv2.morphologyEx(hair, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8)) > 0) & a
-    # blonde strands are thin with darker lines between them: join them into one mass of hair, then keep only the big
-    # pieces that reach the head (yellowish specks on skin are small and lower down)
-    hair = (h >= 17) & (h <= 40) & (s > 40) & (v > 50) & a; hair[int(top + 0.36 * H):] = False
-    hair = cv2.morphologyEx(hair.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
-    n, lab, st, _ = cv2.connectedComponentsWithStats(hair, 8)
-    keep = [i for i in range(1, n) if st[i, cv2.CC_STAT_AREA] > 0.0008 * H * H and st[i, cv2.CC_STAT_TOP] < top + 0.2 * H]
-    hair = np.isin(lab, keep).astype(np.uint8)
-    return (cv2.morphologyEx(hair, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)) > 0) & a
-
-def garment_mask(rgba):
-    """Black clothing and shoes: near-black (saturation means nothing that dark) or dark grey. Thin dark line art is
-    dropped by the opening; big pieces stay."""
-    a = rgba[:, :, 3] > 127
-    h, s, v = hsv_of(rgba)
-    g = (((v < 60) | ((s < 50) & (v < 130))) & a).astype(np.uint8)
-    g = cv2.morphologyEx(g, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
-    g = cv2.morphologyEx(g, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8)) > 0
-    return g & a
-
-def whole_shorts(garment, a, hair, L, part):
-    """Shorts as one piece: a drawstring, zip or highlight on them is not skin. Below the waistband and above each hem,
-    any non-cloth patch that does not connect to skin outside the shorts becomes cloth."""
-    hh, ww = a.shape
-    Y, X = np.mgrid[0:hh, 0:ww]
-    cx, hw, ny, cy = frames(L)
-    area = np.zeros(a.shape, bool)
-    wb = next((y for y in range(int(ny + 0.5 * (cy - ny)), int(cy))
-               if (lambda xs: len(xs) and garment[y, xs].mean() > 0.6)(np.nonzero(a[y] & (part[y] == 0) & (np.abs(np.arange(ww) - cx) < 1.2 * hw))[0])), None)
-    if wb is None: return garment
-    area[wb:int(cy) + 1] = (a & (part == 0) & (np.abs(X - cx) < 1.4 * hw))[wb:int(cy) + 1]
-    for sg in (-1, 1):                                       # each leg: down from the crotch while the row is mostly cloth
-        for y in range(int(cy) + 1, hh):
-            xs = np.nonzero((part[y] == 3) & ((np.arange(ww) - cx) * sg > 0))[0]
-            if not len(xs) or garment[y, xs].mean() < 0.5: break
-            area[y, xs] = True
-    bare = a & ~garment & ~hair
-    n, lab = cv2.connectedComponents(bare.astype(np.uint8), connectivity=8)
-    edge = cv2.dilate((~a).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0   # bare skin at the outline (hips beside high-cut shorts)
-    outside = np.unique(lab[bare & (~area | edge)])
-    patches = bare & area & ~np.isin(lab, outside)
-    return garment | patches
+    def head_mass(m, close, open_=0):
+        m = cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((close, close), np.uint8))
+        if open_: m = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (open_, open_)))
+        n, lab, st, _ = cv2.connectedComponentsWithStats(m, 8)
+        keep = [i for i in range(1, n) if st[i, cv2.CC_STAT_AREA] > 0.0008 * H * H and st[i, cv2.CC_STAT_TOP] < top + 0.2 * H]
+        return np.isin(lab, keep)
+    yellow = (h >= 17) & (h <= 40) & (s > 40) & (v > 50) & a
+    edges = cv2.Canny(cv2.GaussianBlur(cv2.cvtColor(np.ascontiguousarray(rgba[:, :, :3]), cv2.COLOR_RGB2GRAY), (3, 3), 0), 40, 110) > 0
+    busy = (cv2.blur(edges.astype(np.float32), (11, 11)) > 0.16) & (h >= 9) & (h <= 40) & a   # strands; muscle lines are thin and drop out
+    yellow[int(top + 0.36 * H):] = False; busy[int(top + 0.36 * H):] = False
+    hair = head_mass(yellow, 7) | (head_mass(busy, 9, 9) if strands else False)
+    return (cv2.morphologyEx(hair.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)) > 0) & a
 
 def hairless(rgba, sex):
-    """The figure's silhouette without hair (a ponytail or loose strands would read as extra limbs): the largest piece."""
-    m = (rgba[:, :, 3] > 127) & ~hair_mask(rgba, sex)
+    """The figure's silhouette without hair (a ponytail or loose strands would read as extra limbs): the largest piece.
+    Only hair of the hair colour goes, so a ponytail lying across the back does not punch a hole in it."""
+    m = (rgba[:, :, 3] > 127) & ~hair_mask(rgba, sex, strands=False)
     n, lab, st, _ = cv2.connectedComponentsWithStats(m.astype(np.uint8), 8)
     if n > 1: m = lab == (1 + int(np.argmax(st[1:, cv2.CC_STAT_AREA])))
     return (m * 255).astype(np.uint8)
@@ -112,7 +86,7 @@ def landmarks(mask, full=None):
         if len(r) >= 3:
             mid = [s for s in r if s[0] <= cx <= s[1]]
             # a real armpit has a torso-wide middle and an arm-thick run on each side (loose hair strands are thin)
-            if mid and mid[0][1] - mid[0][0] >= 0.15 * H \
+            if mid and mid[0][1] - mid[0][0] >= 0.1 * H \
                     and any(s[1] < mid[0][0] and s[1] - s[0] >= 0.02 * H for s in r) \
                     and any(s[0] > mid[0][1] and s[1] - s[0] >= 0.02 * H for s in r):
                 armpit = y; torso = mid[0]; break
@@ -138,6 +112,7 @@ def landmarks(mask, full=None):
     arm_by_side = {}
     for ai in arms:
         arm_by_side['L' if cent[ai][0] < cx else 'R'] = lab == ai
+    arm, span = {}, {}
     for side in 'LR':
         if side in arm_by_side:
             a = arm_by_side[side]
@@ -148,24 +123,40 @@ def landmarks(mask, full=None):
                 r = runs(m[y])
                 if len(r) < 3: break
                 s = r[0] if side == 'L' else r[-1]; a[y, s[0]:s[1] + 1] = True
-        ay, ax = np.nonzero(a); a0, a1 = ay.min(), ay.max()
+        ay = np.nonzero(a)[0]; arm[side], span[side] = a, (ay.min(), ay.max())
+    # the pose is symmetric: an arm whose hand rests on the hip ends early in the silhouette, so both arms take their
+    # heights from the longer one
+    a0, a1 = max(span.values(), key=lambda s: s[1] - s[0])
+    for side in 'LR':
+        a = arm[side]
         def centre_at(f):
-            y = int(a0 + f * (a1 - a0)); xs_ = np.nonzero(a[y])[0]; return (float(xs_.mean()), y)
+            y = int(a0 + f * (a1 - a0)); xs_ = np.nonzero(a[y])[0]
+            if not len(xs_):            # past this arm's end (the hand rests on the hip): an arm's width in from the outside
+                r = runs(m[y]); s = r[0] if side == 'L' else r[-1]
+                w = float(np.median([np.count_nonzero(a[yy]) for yy in range(span[side][0], span[side][1] + 1)]))
+                xs_ = np.array([s[0] + w / 2 if side == 'L' else s[1] - w / 2])
+            return (float(xs_.mean()), y)
         L['elbow' + side] = centre_at(0.36)
         L['wrist' + side] = centre_at(0.78)
-        L['hand' + side] = centre_at(0.97)
+        # the fist: on from the wrist along the forearm (measuring it on the silhouette fails when a hand touches a thigh)
+        L['hand' + side] = (L['wrist' + side][0] + 0.45 * (L['wrist' + side][0] - L['elbow' + side][0]),
+                            L['wrist' + side][1] + 0.45 * (L['wrist' + side][1] - L['elbow' + side][1]))
     bm = lab == body
-    bw = np.array([(r[-1][1] - r[0][0]) if (r := runs(bm[y])) else 0 for y in range(bm.shape[0])])
-    # crotch: first row (from the hips down) where the body splits into two legs
+    # torso width per row: the piece on the centre line only (an arm can join the body where a hand touches a thigh)
+    mid = lambda y: next((s for s in runs(bm[y]) if s[0] <= cx <= s[1]), None)
+    bw = np.array([(s[1] - s[0]) if (s := mid(y)) else 0 for y in range(bm.shape[0])])
+    # crotch: first row (from the hips down) with a gap at the centre line, between the legs (counting pieces per row
+    # would stop early when a hand touches a thigh and the arm joins the body)
     crotch = None
+    c0, c1 = int(cx - 0.015 * H), int(cx + 0.015 * H) + 1
     for y in range(int(top + 0.42 * H), int(top + 0.7 * H)):
-        if len(runs(bm[y])) >= 2: crotch = y; break
+        if not bm[y, c0:c1].all(): crotch = y; break
     if crotch is None: raise RuntimeError('no crotch found')
     L['crotch'] = (cx, crotch)
-    wy = min(range(armpit + 5, int(armpit + 0.6 * (crotch - armpit))), key=lambda y: bw[y]); r = runs(bm[wy])
-    L['waistL'], L['waistR'] = (r[0][0], wy), (r[-1][1], wy)
-    hy = max(range(wy, crotch), key=lambda y: bw[y]); r = runs(bm[hy])
-    L['hipL'], L['hipR'] = (r[0][0], hy), (r[-1][1], hy)
+    wy = min(range(armpit + 5, int(armpit + 0.6 * (crotch - armpit))), key=lambda y: bw[y]); s = mid(wy)
+    L['waistL'], L['waistR'] = (s[0], wy), (s[1], wy)
+    hy = max(range(wy, crotch), key=lambda y: bw[y]); s = mid(hy)
+    L['hipL'], L['hipR'] = (s[0], hy), (s[1], hy)
     # legs: per side, knee = narrowest point in the middle of the leg, ankle = narrowest point near the floor
     legs = bm.copy(); legs[:crotch + 1] = False
     n2, lab2, st2, ce2 = cv2.connectedComponentsWithStats(legs.astype(np.uint8), 8)
@@ -225,14 +216,20 @@ def limb_maps(L, a, H):
 # far along it is (armpit/crotch to elbow/knee, elbow to wrist, knee to ankle) and how far across; on the torso by height
 # between the same landmarks (neck base, shoulders, armpits, waist, hips, crotch) and how far across that row it is. So
 # every muscle lands on the same place of the drawn body, and its edges follow the art's outline.
-TOP = 0.6     # in the torso frame (neck base 0, crotch 1): clothing above this is a top, below it shorts
-# muscles that may show over clothing, and on which garment; the rest are cut at the clothing's edge
-THROUGH = {('m', 'front'): {}, ('f', 'front'): {'chest': 'top'},
-           ('m', 'back'): {'glutes': 'shorts'}, ('f', 'back'): {'glutes': 'shorts', 'traps': 'top', 'rhomboids': 'top', 'lats': 'top'}}
-
 def load_anatomy():
     s = open(os.path.join(ROOT, 'anatomy.js'), encoding='utf8').read()
-    return json.loads(s[s.index('{'):s.rindex('}') + 1])
+    A = json.loads(s[s.index('{'):s.rindex('}') + 1])
+    # MuscleMap's female front labels the thigh muscles the wrong way round (adductors on the outside): of the thigh
+    # muscles tagged adductors or glutes (abductors), the two nearest the centre line are the adductors
+    for sx in A:
+        F = A[sx]['front']
+        vx, _, vw, _ = [float(v) for v in F['viewBox'].split()]
+        thigh = [m for m in F['muscles'] if m['key'] in ('adductors', 'glutes')]
+        if len(thigh) == 4:
+            off = lambda m: np.mean([abs(float(x) - (vx + vw / 2)) for d in m['d'] for x in NUM.findall(d)[0::2]])
+            for i, m in enumerate(sorted(thigh, key=off)):
+                m['key'], m['name'] = ('adductors', 'Adductors') if i < 2 else ('glutes', 'Glute med / abductors')
+    return A
 
 NUM = re.compile(r'-?\d+(?:\.\d+)?')
 def path_polys(d, step=6):
@@ -268,6 +265,62 @@ class Body:
         self.cx, self.hw, self.ny, self.cy = frames(self.L)
         L = self.L
         self.anch = [self.ny, L['shoulderL'][1], L['armpitL'][1], L['waistL'][1], L['hipL'][1], self.cy]
+        # each forearm's usual width, where it hangs free: where a hand rests on a thigh the arm's row runs on into the leg
+        self.arm_w = {}
+        for side in 'LR':
+            ws = []
+            for y in range(int(L['elbow' + side][1]), int(L['wrist' + side][1])):
+                r = runs(self.m[y]); s = r[0] if side == 'L' else r[-1]
+                if len(r) >= 2 and not (s[0] <= self.cx <= s[1]): ws.append(s[1] - s[0])
+            self.arm_w[side] = float(np.median(ws)) if ws else 0.06 * self.H
+        # the hands: from the wrist down, follow the arm's piece row by row; where the hand rests on a thigh the piece
+        # runs on into the leg, so it keeps the hand's columns from the row above
+        self.hand, self.hand_rows = np.zeros(self.m.shape, bool), {}
+        for side in 'LR':
+            wy, hy = L['wrist' + side][1], L['hand' + side][1]
+            y0, y1 = int(wy - 0.01 * self.H), int(hy + 0.3 * (hy - wy))
+            prev = None
+            for y in range(max(0, y0), min(self.m.shape[0], y1)):
+                r = runs(self.m[y])
+                if prev is None: cand = [r[0] if side == 'L' else r[-1]] if r else []
+                else: cand = [c for c in r if c[0] <= prev[1] + 1 and c[1] >= prev[0] - 1]   # pieces overlapping the hand above
+                if not cand: break                                                            # past the fingertips
+                s = (min(c[0] for c in cand), max(c[1] for c in cand))
+                if prev is not None and s[1] - s[0] > 1.6 * (prev[1] - prev[0]) + 4:           # ran on into a thigh: keep
+                    s = (max(s[0], prev[0]), min(s[1], prev[1]))                               # the hand's last width
+                for c in cand: self.hand[y, max(c[0], s[0]):min(c[1], s[1]) + 1] = True
+                prev = s
+            self.hand_rows[side] = (y0, y)
+        # legs are measured without the hands
+        self.legs = self.m & ~self.hand
+        # the torso's own edges below the armpits: where a hand rests against the hips the row's middle piece runs on
+        # into the arm, so an edge that jumps outward from one row to the next keeps its last position
+        self.edges, l, r = {}, None, None
+        for y in range(int(L['armpitL'][1]) + 1, int(self.cy) + 1):
+            s = next((s for s in runs(self.m[y]) if s[0] <= self.cx <= s[1]), None)
+            if s is None: continue
+            if l is None: l, r = s[0], s[1]
+            else:
+                l = s[0] if s[0] >= l - 0.012 * self.H else l
+                r = s[1] if s[1] <= r + 0.012 * self.H else r
+            self.edges[y] = (l, r)
+        # each thigh's outer edge: measured on the leg, and across the rows where a hand rests on it, drawn straight from the
+        # edge above the hand to the edge below it
+        for side in 'LR':
+            out = -1 if side == 'L' else 1
+            kx = (L['knee' + side + 'o'][0] + L['knee' + side + 'i'][0]) / 2
+            ky = int((L['knee' + side + 'o'][1] + L['knee' + side + 'i'][1]) / 2)
+            h0, h1 = self.hand_rows[side]
+            rows, edge = [], []
+            for y in range(int(self.cy), ky + 1):
+                r = [s for s in runs(self.legs[y]) if ((s[0] + s[1]) / 2 - self.cx) * out > 0]
+                if not r: continue
+                s = min(r, key=lambda s: 0 if s[0] <= kx <= s[1] else min(abs(s[0] - kx), abs(s[1] - kx)))
+                o = s[0] - 1 if side == 'L' else s[1] + 1                                   # just outside the leg's outer edge
+                touched = 0 <= o < self.m.shape[1] and self.hand[max(0, y - 2):y + 3, max(0, o - 2):o + 3].any()   # a hand there
+                if not touched: rows.append(y); edge.append(s[0] if side == 'L' else s[1])
+            for y in range(int(self.cy), ky + 1):
+                if rows: self.edges[side, y] = float(np.interp(y, rows, edge))
         inside = self.m.astype(np.uint8)
         _, self.near = cv2.distanceTransformWithLabels(1 - inside, cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
         yy, xx = np.nonzero(inside); self.lut = np.zeros((self.near.max() + 1, 2), np.int32); self.lut[self.near[yy, xx]] = np.stack([yy, xx], 1)
@@ -280,14 +333,25 @@ class Body:
     def piece(self, y, x_hint, part, side):
         """The row's piece a point belongs to: the torso (above the armpits the shoulders and arms count with it), or a
         limb on the point's own side (an arm is the outermost piece)."""
-        r = runs(self.m[int(np.clip(round(y), 0, self.m.shape[0] - 1))])
+        m = self.legs if part in (3, 4) else self.m
+        yy = int(np.clip(round(y), 0, m.shape[0] - 1)); r = runs(m[yy])
+        while not r and yy < m.shape[0] - 1: yy += 1; r = runs(m[yy])   # under hair: the first row of body below
         if part == 0:
             if y <= self.L['armpitL'][1]: return (r[0][0], r[-1][1])
-            return min(r, key=lambda s: 0 if s[0] <= self.cx <= s[1] else min(abs(s[0] - self.cx), abs(s[1] - self.cx)))
+            s = min(r, key=lambda s: 0 if s[0] <= self.cx <= s[1] else min(abs(s[0] - self.cx), abs(s[1] - self.cx)))
+            e = self.edges.get(yy)
+            return (max(s[0], e[0]), min(s[1], e[1])) if e else s
         out = -1 if side == 'L' else 1
-        own = [s for s in r if ((s[0] + s[1]) / 2 - self.cx) * out > 0 and not (s[0] <= self.cx <= s[1])] or r
-        if part in (1, 2): return own[0] if side == 'L' else own[-1]
-        return min(own, key=lambda s: 0 if s[0] <= x_hint <= s[1] else min(abs(s[0] - x_hint), abs(s[1] - x_hint)))
+        own = [s for s in r if ((s[0] + s[1]) / 2 - self.cx) * out > 0 and (part in (3, 4) or not (s[0] <= self.cx <= s[1]))] or r   # touching thighs can cross the centre line
+        if part in (1, 2):
+            s, w = (own[0] if side == 'L' else own[-1]), self.arm_w[side]
+            if s[1] - s[0] > 1.5 * w:                        # a hand resting on a thigh: an arm's width from the outer edge
+                s = (s[0], s[0] + w) if side == 'L' else (s[1] - w, s[1])
+            return s
+        s = min(own, key=lambda s: 0 if s[0] <= x_hint <= s[1] else min(abs(s[0] - x_hint), abs(s[1] - x_hint)))
+        e = self.edges.get((side, yy)) if part == 3 else None
+        if e is not None: s = (max(s[0], e), s[1]) if side == 'L' else (s[0], min(s[1], e))
+        return s
 
     def limb_rows(self, part, side):
         L = self.L
@@ -336,35 +400,93 @@ def template_body(T, height=1000.0):
         for p in path_polys(d): cv2.fillPoly(m, [((p - [vx, vy]) * k).round().astype(np.int32)], 255)
     return Body(m), (vx, vy, k)
 
-def regions_for(crop, T, tb, view, sex):
-    """The template's muscles on this drawing, cut to where they can glow: not over hair, head, hands or feet, and not
-    over clothing unless the muscle shows through it."""
-    FT, (vx, vy, k) = tb
+GROW = 0.025   # how far a muscle may grow into bare body, as a share of the body's height
+
+def flat(c, H):
+    """A flat horizontal sliver: what is left of a muscle squeezed against a hand or the hairline."""
+    x, y, w, h = cv2.boundingRect(c)
+    return h < 0.012 * H and w > 2 * h
+
+def to_path(c):
+    return 'M' + ' L'.join('%d %d' % (x, y) for x, y in cv2.approxPolyDP(c, 1.0, True)[:, 0, :]) + ' Z'
+
+def regions_for(crop, sources, view, sex):
+    """The hunter's body below the neck as the System's muscle map: the template's muscles moved onto the drawing, grown
+    a little to fill the body, and plain panels over what is left, so no dark patches show; a thin dark seam wherever two
+    pieces meet. Head, hair, hands and feet stay the drawing's.
+    Returns the muscles [{key, name, d}], the plain panels, the body's outline, the landmarks, and the share of the body
+    left bare. sources: [(template figure, its body frame, the muscle keys to take from it)]."""
     a = crop[:, :, 3] > 127
-    FA = Body(hairless(crop, sex))
-    L, H = FA.L, FA.H
+    FA = Body(hairless(crop, sex)); L, H = FA.L, FA.H
     Y, X = np.mgrid[0:a.shape[0], 0:a.shape[1]]
     hair = cv2.dilate(hair_mask(crop, sex).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
-    garment = whole_shorts(garment_mask(crop), a, hair, L, FA.part)
-    body = a & ~hair & (Y > FA.ny - (0.01 if view == 'front' else 0.05) * H)    # from behind the traps run up the neck
-    for s in 'LR':
-        hx, hy = L['hand' + s]; body &= ((X - hx) ** 2 + (Y - hy) ** 2) > (0.055 * H) ** 2
-    body &= Y < max(L['ankleLo'][1], L['ankleRo'][1]) + 0.01 * H
-    V = (Y - FA.ny) / (FA.cy - FA.ny)
-    out = []
-    for mu in T['muscles']:
-        key = mu['key']; where = THROUGH[sex, view].get(key)
-        cloth_ok = (garment & ((V < TOP) if where == 'top' else (V > TOP))) if where else np.zeros_like(body)
-        ok = body & (~garment | cloth_ok)
-        for d in mu['d']:
-            for p in path_polys(d):
+    body = a & ~hair & ~FA.hand & (Y > FA.ny - (0.008 if view == 'front' else 0.04) * H)   # from behind the traps run up the neck
+    body &= np.where(X < FA.cx, Y < L['ankleLo'][1] + 0.01 * H, Y < L['ankleRo'][1] + 0.01 * H)   # each leg to its own ankle
+    n, cc, st, _ = cv2.connectedComponentsWithStats(body.astype(np.uint8), 8)   # every sizeable piece: hair can cut off an arm
+    body = np.isin(cc, [i for i in range(1, n) if st[i, cv2.CC_STAT_AREA] > 0.002 * H * H])
+    # 1. the template's muscles, one label per muscle shape
+    lab, keys = np.zeros(a.shape, np.int32), [None]
+    for T, (FT, (vx, vy, k)), take in sources:
+        for mu in T['muscles']:
+            if mu['key'] not in take: continue
+            for p in (p for d in mu['d'] for p in path_polys(d)):
                 q = np.array([FA.from_body(*FT.to_body(x, y)) for x, y in (p - [vx, vy]) * k])
                 mk = np.zeros(a.shape, np.uint8); cv2.fillPoly(mk, [q.round().astype(np.int32)], 1)
-                mk = cv2.medianBlur((mk.astype(bool) & ok).astype(np.uint8) * 255, 5)
-                cs, _ = cv2.findContours(mk, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-                out += [{'key': key, 'name': NAMES[key], 'd': 'M' + ' L'.join('%d %d' % (x, y) for x, y in cv2.approxPolyDP(c, 1.0, True)[:, 0, :]) + ' Z'}
-                        for c in cs if cv2.contourArea(c) >= 0.00008 * H * H]
-    return out, L
+                mk = mk.astype(bool) & body & (lab == 0)
+                if mk.sum() < 0.00008 * H * H: continue
+                keys.append(mu['key']); lab[mk] = len(keys) - 1
+    # 2. each muscle grows a little, up to GROW of the body's height, into the bare body around it (the drawing is wider
+    # and curvier than the template); what is still bare after that (pelvis, knees, elbows) becomes plain panels that
+    # never light up, so no black shows
+    src = lab > 0
+    dist, idx = cv2.distanceTransformWithLabels((~src).astype(np.uint8), cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
+    ys, xs = np.nonzero(src); lut = np.zeros(idx.max() + 1, np.int32); lut[idx[ys, xs]] = lab[ys, xs]
+    lab = np.where(body & (dist <= GROW * H), lut[idx], 0)
+    n, cc, st, _ = cv2.connectedComponentsWithStats((body & (lab == 0)).astype(np.uint8), 4)
+    for i in range(1, n):
+        if st[i, cv2.CC_STAT_AREA] < 0.0006 * H * H: continue                   # specks: left to the nearest muscle below
+        keys.append(None); lab[cc == i] = len(keys) - 1
+    def fill(lab):                                                             # bare body joins the nearest muscle or panel
+        rest = body & (lab == 0)
+        if rest.any():
+            _, idx = cv2.distanceTransformWithLabels((lab == 0).astype(np.uint8), cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
+            ys, xs = np.nonzero(lab > 0); lut = np.zeros(idx.max() + 1, np.int32); lut[idx[ys, xs]] = lab[ys, xs]
+            lab[rest] = lut[idx][rest]
+        return lab
+    lab = fill(lab)
+    for it in range(4):                                                        # crumbs and flat slivers join a neighbour
+        crumbs = np.zeros(a.shape, bool)
+        for i in range(1, len(keys)):
+            n, cc, st, _ = cv2.connectedComponentsWithStats((lab == i).astype(np.uint8), 8)
+            for j in range(1, n):
+                w, h, area = st[j, cv2.CC_STAT_WIDTH], st[j, cv2.CC_STAT_HEIGHT], st[j, cv2.CC_STAT_AREA]
+                if area < 0.00015 * H * H or (h < 0.012 * H and w > 2 * h): crumbs |= cc == j
+        if not crumbs.any(): break
+        lab[crumbs] = 0
+        if it < 3: lab = fill(lab)
+        else: body &= ~crumbs                                                  # no neighbour (bits of fingers): the drawing's
+    # 3. a dark seam where two muscles meet, about 1% of the body's height wide
+    seam = np.zeros(a.shape, bool)
+    for dy, dx in ((0, 1), (1, 0)):
+        p, q = lab[:lab.shape[0] - dy, :lab.shape[1] - dx], lab[dy:, dx:]
+        diff = (p != q) & (p > 0) & (q > 0)
+        seam[:lab.shape[0] - dy, :lab.shape[1] - dx] |= diff; seam[dy:, dx:] |= diff
+    seam = cv2.dilate(seam.astype(np.uint8), np.ones((2, 2), np.uint8)) > 0     # 3 px
+    out, panels, covered = [], [], np.zeros(a.shape, np.uint8)
+    for i in range(1, len(keys)):
+        mk = cv2.medianBlur(((lab == i) & ~seam).astype(np.uint8) * 255, 3)
+        cs, _ = cv2.findContours(mk, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        for c in cs:
+            if cv2.contourArea(c) < 0.00008 * H * H or flat(c, H): continue
+            if keys[i]: out.append({'key': keys[i], 'name': NAMES[keys[i]], 'd': to_path(c)})
+            else: panels.append(to_path(c))
+            cv2.drawContours(covered, [c], -1, 1, -1)
+    covered = covered > 0
+    cs, _ = cv2.findContours(cv2.medianBlur(body.astype(np.uint8) * 255, 5), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    outline = [to_path(c) for c in cs if cv2.contourArea(c) >= 0.002 * H * H]
+    # bare patches: body the muscles do not cover, ignoring the seams (an opening wider than a seam removes them)
+    bare = cv2.morphologyEx((body & ~covered).astype(np.uint8), cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)))
+    return out, panels, outline, L, bare > 0, body
 
 # ---------------------------------------------------------------- main
 def main(out=None):
@@ -372,8 +494,9 @@ def main(out=None):
     art, chars = os.path.join(ROOT, 'art', 'src'), os.path.join(ROOT, 'art', 'chars')
     os.makedirs(chars, exist_ok=True)
     if out: os.makedirs(out, exist_ok=True)
-    report, app = {}, {}
+    report, app, patches = {}, {}, {}
     A = load_anatomy()
+    tbs = {(sx, view): template_body(A[sx][view]) for sx in 'mf' for view in ('front', 'back')}
     # debug colours (BGR), picked so neighbouring muscles differ
     pal = dict(zip(REGIONS, [(60, 60, 230), (60, 220, 170), (230, 200, 60), (200, 60, 220), (40, 140, 250), (80, 210, 80),
                              (250, 150, 110), (180, 100, 255), (40, 90, 160), (60, 230, 160), (220, 160, 170), (160, 40, 160),
@@ -381,7 +504,10 @@ def main(out=None):
     for sx in 'mf':
         imgs = {b: np.array(Image.open(os.path.join(art, '%s-%s.png' % (sx, b))).convert('RGBA')) for b in BUILDS}
         for vi, view in enumerate(('front', 'back')):
-            T = A[sx][view]; tb = template_body(T)
+            # his traced figure is the detailed one (glutes in parts, three hamstring heads, the shoulder blades), so both
+            # characters take their muscles from it; hers keeps only its own chest
+            own = {'chest'} if sx == 'f' and view == 'front' else set()
+            sources = [(A['m'][view], tbs['m', view], set(REGIONS) - own)] + ([(A['f'][view], tbs['f', view], own)] if own else [])
             halves = {b: im[:, :768] if vi == 0 else im[:, 768:] for b, im in imgs.items()}
             # one canvas for the three builds: union bounding box plus a margin, so swapping builds does not jump
             ys, xs = np.nonzero(np.any(np.stack([h[:, :, 3] > 8 for h in halves.values()]), 0))
@@ -391,12 +517,12 @@ def main(out=None):
             for b in BUILDS:
                 crop = np.ascontiguousarray(halves[b][y0:y1, x0:x1])
                 name = '%s-%s-%s' % (sx, b, view)
-                regions, L = regions_for(crop, T, tb, view, sx)
-                report[name] = sorted(set(r['key'] for r in regions))
+                regions, panels, outline, L, bare, body = regions_for(crop, sources, view, sx)
+                report[name] = sorted(set(r['key'] for r in regions)); patches[name] = bare.sum() / max(1, body.sum())
                 Image.fromarray(crop).save(os.path.join(chars, name + '.webp'), 'WEBP', quality=88, method=6)
                 app.setdefault(sx, {}).setdefault(b, {})[view] = {
                     'w': int(x1 - x0), 'h': int(y1 - y0), 'img': 'art/chars/' + name + '.webp',
-                    'feet': int(max(L['footL'][1], L['footR'][1])), 'regions': [[r['key'], r['d']] for r in regions]}
+                    'feet': int(max(L['footL'][1], L['footR'][1])), 'body': outline, 'panels': panels, 'regions': [[r['key'], r['d']] for r in regions]}
                 if not out: continue
                 Image.fromarray(crop).save(os.path.join(out, name + '.png'))
                 json.dump({'w': int(x1 - x0), 'h': int(y1 - y0), 'regions': regions,
@@ -409,6 +535,8 @@ def main(out=None):
                 over = dbg.copy()
                 polys = [(r['key'], np.array([[int(v) for v in t.split()] for t in r['d'][1:-2].split(' L')], np.int32)) for r in regions]
                 for k, pts in polys: cv2.fillPoly(over, [pts], pal[k])
+                for d in panels: cv2.fillPoly(over, [np.array([[int(v) for v in t.split()] for t in d[1:-2].split(' L')], np.int32)], (90, 90, 90))   # panels grey
+                over[bare] = (0, 0, 255)                                                          # bare patches red
                 dbg = cv2.addWeighted(over, 0.45, dbg, 0.55, 0)
                 for k, pts in polys:
                     cv2.polylines(dbg, [pts], True, pal[k], 1, cv2.LINE_AA)
@@ -425,12 +553,15 @@ def main(out=None):
         for b in BUILDS:
             f, k = report['%s-%s-front' % (sx, b)], report['%s-%s-back' % (sx, b)]
             missing = [r for r in REGIONS if r not in f and r not in k]
-            print('%s-%-9s front %-2d back %-2d %s' % (sx, b, len(f), len(k), 'MISSING ' + ', '.join(missing) if missing else 'all 16'))
+            bare = max(patches['%s-%s-%s' % (sx, b, v)] for v in ('front', 'back'))
+            print('%s-%-9s front %-2d back %-2d %-8s bare patches %.1f%% of the body' % (sx, b, len(f), len(k), 'MISSING ' + ', '.join(missing) if missing else 'all 16', bare * 100))
             if missing: raise SystemExit('some muscles would never light up')
+            if bare > 0.02: raise SystemExit('dark patches between the muscles')
     with open(os.path.join(ROOT, 'characters.js'), 'w', encoding='utf8', newline='\n') as f:
         f.write('// Arise characters, built by tools/prepare-characters.py from the art in art/src. Do not edit by hand.\n'
-                '// Per sex, build and view: canvas size, image, the line under the feet (for the summoning circle), the muscle\n'
-                '// shapes as [body-map key, SVG path in the image\'s pixels] (MuscleMap\'s traced muscles, fitted to the art).\n'
+                '// Per sex, build and view: canvas size, image, the line under the feet (for the summoning circle), the outline of\n'
+                '// the body below the neck, and its muscle shapes as [body-map key, SVG path in the image\'s pixels] (MuscleMap\'s\n'
+                '// traced muscles, fitted to the art and grown to cover the body).\n'
                 'window.ARISE_CHARS = ' + json.dumps(app, separators=(',', ':')) + ';\n')
     kb = lambda p: os.path.getsize(p) / 1024
     print('characters.js %.0f KB, images %.0f KB' % (kb(os.path.join(ROOT, 'characters.js')), sum(kb(os.path.join(chars, n)) for n in os.listdir(chars))))

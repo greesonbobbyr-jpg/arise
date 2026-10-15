@@ -201,7 +201,8 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat3 .card{margin:0;padding:12px}
 .stat3 .v{font-size:24px}
-/* characters: illustrated hunters (art/chars), muscles lit in the System's green. Only opacity and transform animate. */
+/* characters: illustrated hunters (art/chars) with the System's muscle map below the neck, trained muscles lit green.
+   Only opacity and transform animate. */
 .bodymap{position:relative;display:flex;justify-content:center;gap:2%;padding:16px 4px 2px;overflow:hidden}
 .bodymap::before{content:"";position:absolute;inset:4px;pointer-events:none;opacity:.55;background-repeat:no-repeat;
   background-image:linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy)),linear-gradient(var(--cy),var(--cy));
@@ -221,8 +222,10 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 @keyframes bmspin{to{transform:rotate(360deg)}}
 .char .lab2{text-align:center;margin-top:30px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--tx3);font-weight:600}
 .char path{vector-effect:non-scaling-stroke}
-.char .mu{fill:#000;fill-opacity:0;stroke:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.char .mu.lit{fill:var(--gr);stroke:rgba(182,255,59,.9);stroke-width:.6;stroke-linejoin:round}
+.char .sil{fill:#07090D;stroke:rgba(62,230,255,.35);stroke-width:.8}
+.char .mu{fill:#141C25;stroke:rgba(62,230,255,.55);stroke-width:.6;stroke-linejoin:round;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.char .mu.lit{fill:var(--gr);stroke:rgba(182,255,59,.9)}
+.char .pn{fill:#10161E;stroke:rgba(62,230,255,.4);stroke-width:.6;stroke-linejoin:round;pointer-events:none}
 .char .fib{pointer-events:none;stroke:none}
 .char .glow{pointer-events:none;fill:var(--gr)}
 .char .halo{position:absolute;left:0;top:0;width:100%;height:auto;overflow:visible;pointer-events:none;mix-blend-mode:screen;opacity:.4;animation:bmglow 2.4s ease-in-out infinite;will-change:opacity}
@@ -465,7 +468,7 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.12.0';
+const APP_VERSION = '1.13.0';
 const KG = 0.45359237;
 
 // ---------- state ----------
@@ -1542,8 +1545,8 @@ const BM_MUSCLE = { 'Chest': ['chest'], 'Upper chest': ['chest', 'delts'], 'Tric
 const BM_GROUP = { chest: ['chest'], back: ['lats', 'traps', 'rhomboids'], shoulders: ['delts'], legs: ['quads', 'hams', 'calves'], glutes: ['glutes'], arms: ['biceps', 'triceps', 'forearms'], core: ['abs', 'obliques'] };
 let bmSets = {};
 const buildFor = C.buildFor;   // lean at E and D, athletic at C and B, powerful at A and S
-// A character for a sex and view. Untrained, the hunter stands in shadow; every muscle trained this week is lit in the
-// System's green (shading and line work kept, brighter with more sets) with a glow around it.
+// A character for a sex and view: the illustrated hunter's head, hair, hands and feet (in shadow), and below the neck the
+// System's muscle map. Every muscle trained this week is lit in green, brighter with more sets, with a glow around it.
 // opts: lit {muscleKey: sets}, rank 'E'..'S' (build and aura strength), build (overrides the rank's), aura, id (unique on
 // screen), label, tap (muscles answer taps)
 function charSVG(sex, view, opts) {
@@ -1563,24 +1566,25 @@ function charSVG(sex, view, opts) {
     '<feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="r0"/><feFlood flood-color="#3EE6FF" flood-opacity=".5"/><feComposite in2="r0" operator="in" result="r1"/><feComposite in="r1" in2="SourceAlpha" operator="out" result="rim"/>' +
     '<feMerge><feMergeNode in="w"/><feMergeNode in="v"/><feMergeNode in="rim"/></feMerge></filter></defs>' +
     '<g filter="url(#au-' + id + ')">' + img + '/></g></svg>';
-  // trained muscles light up the way the traced figure always did: solid System green (brighter with more sets), a fine
-  // fibre texture, a soft highlight and a glow; the rest of the hunter stays in shadow
+  // the muscle map: untrained muscles are dark with a cyan outline; trained ones solid System green (brighter with more
+  // sets) with a fine fibre texture, a soft highlight and a glow
   const op = n => Math.min(1, 0.55 + n / 20);
-  let glow = '', mus = '';
+  let glow = '', mus = (F.panels || []).map(d => '<path class="pn" d="' + d + '"/><path class="fib" d="' + d + '" fill="url(#fb-' + id + ')"/>').join('');   // plain panels: never lit
   for (const [k, d] of F.regions) {
     const n = lit[k] || 0, on = n > 0;
     if (on) glow += '<path d="' + d + '" style="opacity:' + (op(n) * 0.6).toFixed(2) + '"/>';
     mus += '<path class="mu' + (on ? ' lit' : '') + '" d="' + d + '"' + (o.tap ? ' data-bm="' + k + '"' : '') + (on ? ' style="fill-opacity:' + op(n).toFixed(2) + '"' : '') + '>' +
       (o.tap ? '<title>' + C.AURA_NAMES[k] + (on ? ' · ' + n + ' sets this week' : ' · not trained this week') + '</title>' : '') + '</path>';
-    if (on) mus += '<path class="fib" d="' + d + '" fill="url(#fl-' + id + ')"/><path class="fib" d="' + d + '" fill="url(#hi-' + id + ')"/>';
+    mus += '<path class="fib" d="' + d + '" fill="url(#' + (on ? 'fl-' : 'fb-') + id + ')"/>' + (on ? '<path class="fib" d="' + d + '" fill="url(#hi-' + id + ')"/>' : '');
   }
   const s = '<svg class="fig" viewBox="' + vb + '" role="img" aria-label="' + (sx === 'f' ? 'Female' : 'Male') + ' ' + view + ' body map"><defs>' +
     // in shadow: the drawing dimmed, cooled and desaturated
     '<filter id="dim-' + id + '" color-interpolation-filters="sRGB"><feColorMatrix values=".25 .17 .02 0 0 .06 .44 .03 0 0 .08 .28 .36 0 0 0 0 0 1 0"/></filter>' +
     '<filter id="gl-' + id + '" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="11"/></filter>' +
     '<pattern id="fl-' + id + '" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(78)"><path d="M0,0 V9" style="stroke:rgba(12,50,8,.32);stroke-width:1.6;fill:none"/></pattern>' +
+    '<pattern id="fb-' + id + '" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(78)"><path d="M0,0 V9" style="stroke:rgba(62,230,255,.14);stroke-width:1.8;fill:none"/></pattern>' +
     '<radialGradient id="hi-' + id + '" cx="45%" cy="22%" r="85%"><stop offset="0" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>' +
-    img + ' class="base" filter="url(#dim-' + id + ')"/>' + (glow ? '<g class="glow" filter="url(#gl-' + id + ')">' + glow + '</g>' : '') + mus + '</svg>';
+    img + ' class="base" filter="url(#dim-' + id + ')"/>' + F.body.map(d => '<path class="sil" d="' + d + '"/>').join('') + (glow ? '<g class="glow" filter="url(#gl-' + id + ')">' + glow + '</g>' : '') + mus + '</svg>';
   // a second, breathing glow in its own layer, so it can pulse without repainting the drawing
   const halo = glow ? '<svg class="halo" viewBox="' + vb + '" aria-hidden="true"><defs><filter id="hl-' + id + '" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter></defs>' +
     '<g class="glow" filter="url(#hl-' + id + ')">' + glow + '</g></svg>' : '';

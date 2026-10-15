@@ -472,12 +472,15 @@ console.log('\nCharacters (characters.js)');
       const F = A[sex] && A[sex][b] && A[sex][b][v], t = sex + ' ' + b + ' ' + v + ': ';
       eq(t + 'image on disk, canvas size, feet line near the bottom', !!(F && fs.existsSync(path.join(__dirname, F.img)) && F.w > 250 && F.h > 900 && F.feet > 0.92 * F.h && F.feet <= F.h), true);
       eq(t + 'every muscle shape belongs to a body-map region and is a closed path on the canvas', F.regions.length >= 20 && F.regions.every(([k, d]) => KEYS.has(k) && inside(F, d)), true);
+      eq(t + 'the body below the neck has an outline, and any plain panels are paths on the canvas', F.body.length >= 1 && F.body.every(d => inside(F, d)) && F.panels.every(d => inside(F, d)), true);
       F.regions.forEach(([k]) => seen.add(k));
     }
     eq(sex + ' ' + b + ': every muscle shows in the front or the back view', C.AURA_REGIONS.filter(k => !seen.has(k)).join(), '');
   }
   const front = k => (sx, b) => A[sx][b].front.regions.some(r => r[0] === k), back = k => (sx, b) => A[sx][b].back.regions.some(r => r[0] === k);
   eq('chest, abs and biceps on the front; lats, rhomboids, lower back and hamstrings on the back', ['m', 'f'].every(sx => BUILDS.every(b => ['chest', 'abs', 'biceps'].every(k => front(k)(sx, b)) && ['lats', 'rhomboids', 'erectors', 'hams'].every(k => back(k)(sx, b)))), true);
+  // her muscles come from his detailed traced figure (only her chest is her own), so both are equally defined
+  eq('her back is as detailed as his (glutes in parts, hamstring heads)', ['lean', 'athletic', 'powerful'].every(b => ['glutes', 'hams'].every(k => A.f[b].back.regions.filter(r => r[0] === k).length >= A.m[b].back.regions.filter(r => r[0] === k).length - 2)), true);
   eq('the three builds share one canvas, so the figure does not jump when the body grows', ['m', 'f'].every(sx => ['front', 'back'].every(v => new Set(BUILDS.map(b => A[sx][b][v].w + 'x' + A[sx][b][v].h)).size === 1)), true);
   eq('build by Hunter rank (E D C B A S)', C.RANK_ORDER.map(C.buildFor).join(), 'lean,lean,athletic,athletic,powerful,powerful');
   eq('no rank yet → lean', C.buildFor(undefined), 'lean');

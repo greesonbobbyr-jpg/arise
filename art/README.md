@@ -7,7 +7,7 @@ The hunters on the Progress tab, the setup screen and the ARISE moments are illu
 | `src/` | The six source sheets, made by the app's author in ChatGPT with the prompts below: `{m,f}-{lean,athletic,powerful}.png`, 1536 × 1024, transparent background, front view on the left half and back view on the right half |
 | `chars/` | What the app loads: one WebP per sex, build and view (12 files), cut from `src/` by `tools/prepare-characters.py` |
 
-`characters.js` (in the repo root) is generated with them: the canvas size, the image, the line under the feet for the summoning circle, and every muscle shape as an SVG path in the image's pixels, tagged with its body-map region.
+`characters.js` (in the repo root) is generated with them: the canvas size, the image, the line under the feet for the summoning circle, the outline of the body below the neck, every muscle shape as an SVG path in the image's pixels tagged with its body-map region, and the plain panels that fill the rest.
 
 ## Rebuilding
 
@@ -15,11 +15,11 @@ The hunters on the Progress tab, the setup screen and the ARISE moments are illu
 python tools/prepare-characters.py [debug folder]
 ```
 
-Needs Python 3 with `numpy`, `opencv-python-headless` and `pillow`. With a debug folder it also writes, per figure, the cut-out PNG, its regions as JSON with the landmarks, and a `-debug.png` with every region tinted and labelled. It stops with an error if one of the 16 body-map regions would never light up (missing from both the front and the back view).
+Needs Python 3 with `numpy`, `opencv-python-headless` and `pillow`. With a debug folder it also writes, per figure, the cut-out PNG, its regions as JSON with the landmarks, and a `-debug.png` with every region tinted and labelled. Bare patches show in red. It stops with an error if one of the 16 body-map regions would never light up (missing from both the front and the back view), or if more than 2% of a body is left bare between the muscles.
 
-How the muscles get onto the art: the muscle shapes are the traced MuscleMap figures in `anatomy.js` (the ones the app drew before it had illustrated characters). The same landmarks are found on the template and on each drawing (neck base, shoulders, armpits, elbows, wrists, waist, hips, crotch, knees, ankles, feet), and every point of every muscle is moved by body part: on an arm or leg by how far along and across it is, on the torso by its height between those landmarks and how far across that row. So each muscle lands on the same place of the drawn body and its edges follow the art's outline. Hair, head, hands and feet stay clear, and clothing covers muscles except where one shows through it: glutes under the shorts, and her chest and upper back under the sports top.
+How the muscle map gets onto the art: the muscle shapes are the traced MuscleMap figures in `anatomy.js` (the ones the app drew before it had illustrated characters). His figure is the detailed one (glutes in parts, three hamstring heads, the muscles of the shoulder blades), so both characters take their muscles from it; hers keeps only its own chest. The same landmarks are found on the template and on each drawing (neck base, shoulders, armpits, elbows, wrists, hands, waist, hips, crotch, knees, ankles, feet), and every point of every muscle is moved by body part: on an arm or leg by how far along and across it is, on the torso by its height between those landmarks and how far across that row. So each muscle lands on the same place of the drawn body, in every build. Each muscle then grows a little into bare body around it (the drawn bodies are wider and curvier than the template), and what is still bare becomes plain panels that never light up, so the whole body from the neck to the wrists and ankles is covered and no gym clothes show. A thin dark seam runs wherever two pieces meet. Where a hand rests on a thigh, the hand is traced from the wrist so it stays the drawing's and the thigh is measured without it.
 
-In the app, `charSVG()` in `index.html` draws the art dimmed into a cool shadow, then each trained muscle as a solid green shape (brighter with more sets) with a fibre texture, a soft highlight and a glow, and the violet aura from the art's own outline when every muscle was trained that week. The build follows Hunter rank (`buildFor` in `core.js`): lean at E and D, athletic at C and B, powerful at A and S.
+In the app, `charSVG()` in `index.html` draws the art dimmed into a cool shadow, the body's dark outline over it, every muscle dark with a cyan outline, and each trained muscle as a solid green shape (brighter with more sets) with a fibre texture, a soft highlight and a glow; and the violet aura from the art's own outline when every muscle was trained that week. The build follows Hunter rank (`buildFor` in `core.js`): lean at E and D, athletic at C and B, powerful at A and S.
 
 ## Making new art
 
@@ -63,4 +63,4 @@ BUILDS, in this order:
 3. Significantly more muscular and defined, still clearly feminine.
 ```
 
-The hair and clothing tests in the script expect black hair for him, blonde for her, and black clothing; other colours need those tests adjusted.
+The hair test in the script expects black hair for him and blonde for her; other colours need it adjusted. Clothing can be any colour, since the muscle map covers the body.

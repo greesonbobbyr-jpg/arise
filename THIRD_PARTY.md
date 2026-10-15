@@ -12,7 +12,8 @@ https://github.com/Jsplice/MuscleMap
 
 Male and female figures, front and back, from the `@musclemap/assets` 1.1.0 package. The female figure's proportions
 are adjusted with a smooth reshape of the traced paths (`tools/build-anatomy.js`). `tools/prepare-characters.py` moves
-each muscle onto the illustrated characters; the app lights them on top of the art.
+the muscles onto the illustrated characters (the male figure's for both, the female figure's chest for her) and the app
+draws them as the characters' bodies.
 
 MIT License
 
