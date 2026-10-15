@@ -468,7 +468,7 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.13.1';
+const APP_VERSION = '1.13.2';
 const KG = 0.45359237;
 
 // ---------- state ----------
@@ -1654,14 +1654,14 @@ function unitText(t) {
 let persistState = null, installEvt = null, showData = false;
 function isStandalone() { try { return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { return false; } }
 function installCard() {
-  if (isStandalone() || !installEvt || isIOS()) return '';
+  if (isStandalone() || !installEvt || isIOS() || oldAddress()) return '';
   return '<div class="card quest" style="border-left-color:var(--cy)"><div class="row"><div class="grow"><div class="kicker">Install</div><div style="font-weight:600;margin-top:2px">Put Arise on your home screen</div><div class="small muted">Full screen, works offline, and your log is protected.</div></div><button class="btn primary sm" id="home-install">Install</button></div></div>';
 }
 // iPhone: Safari has no install button, and can clear a website's data after about a week without a visit
 function isIOS() { const ua = navigator.userAgent || ''; return /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
 const SHARE_ICON = '<svg class="share-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M6 11v9h12v-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function iosCard(where) {
-  if (!isIOS() || isStandalone()) return '';
+  if (!isIOS() || isStandalone() || oldAddress()) return '';
   if (where === 'home' && (state.hints.iosLater || 0) > Date.now()) return '';
   return '<div class="card quest" id="ios-card-' + where + '" style="border-left-color:var(--cy)"><div class="kicker">iPhone</div><div style="font-weight:600;margin-top:2px">Add Arise to your Home Screen</div>' +
     '<div class="small muted" style="margin-top:4px;line-height:1.5">In Safari, tap <b class="cy">Share</b> ' + SHARE_ICON + ' then <b class="cy">Add to Home Screen</b>. Until you do, Safari can erase your log after about a week without a visit.</div>' +
@@ -1700,9 +1700,10 @@ function exportBackup() {
 // links and QR codes always give the app's public home (the local address while testing)
 const HOME_URL = 'https://arise-hunters.vercel.app/';
 function appUrl() { return /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? location.origin + location.pathname.replace(/index\.html$/, '') : HOME_URL; }
-// the old github.io address is closing: anyone still on it moves their log to the new home
+// the old github.io address is closing: anyone still on it moves their log to the new home (and is not asked to install it)
+function oldAddress() { return /\.github\.io$/.test(location.hostname); }
 function movedCard() {
-  if (!/\.github\.io$/.test(location.hostname)) return '';
+  if (!oldAddress()) return '';
   return '<div class="card quest" id="moved-card" style="border-left-color:var(--gr)"><div class="kicker">New address</div><div style="font-weight:600;margin-top:2px">Arise has moved to ' + HOME_URL.replace(/^https:\/\/|\/$/g, '') + '</div>' +
     '<div class="small muted" style="margin-top:4px;line-height:1.5">This address is closing soon, and your log is saved for this address only, so bring it with you: <b class="cy">1.</b> Export a backup here. <b class="cy">2.</b> Open the new address, add it to your home screen, and tap <b class="cy">Have a backup? Import it</b> on the first screen.</div>' +
     '<div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost sm" id="moved-export">Export backup</button><button class="btn primary sm" id="moved-open">Open new address</button></div></div>';
