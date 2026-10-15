@@ -468,7 +468,7 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const KEY = 'arise.v1';
-const APP_VERSION = '1.13.0';
+const APP_VERSION = '1.13.1';
 const KG = 0.45359237;
 
 // ---------- state ----------
@@ -677,7 +677,8 @@ function viewSetup() {
   if (su.step === 0) {
     h += '<h1 class="su-h">You have been chosen.</h1><p class="su-p">The System records every set you lift and shows you how strong you are becoming. Rise through the ranks, from E to S.</p>' +
       '<label class="field"><span>What should the System call you?</span><input class="in" id="su-name" maxlength="24" placeholder="Hunter" autocomplete="nickname" value="' + esc(su.name) + '"></label>' +
-      '<button class="btn primary su-go" id="su-next">[ CONTINUE ]</button>';
+      '<button class="btn primary su-go" id="su-next">[ CONTINUE ]</button>' +
+      '<button class="su-back" id="su-import">Have a backup? Import it</button><input type="file" id="su-file" accept="application/json,.json" hidden>';
   } else if (su.step === 1) {
     const pick = (sx, label) => '<button class="su-pick' + (su.sex === sx ? ' on' : '') + '" data-su-sex="' + sx + '" aria-pressed="' + (su.sex === sx) + '">' +
       charSVG(sx, 'front', { lit: SU_LIT, rank: 'E', id: 'su-' + sx }) + '<b>' + label + '</b></button>';
@@ -710,6 +711,7 @@ function bindSetup() {
   const nx = $('#su-next'); if (nx) nx.onclick = () => { if (su.step === 1 && !su.sex) return; su.step++; su.err = ''; render(); window.scrollTo(0, 0); };
   const bk = $('#su-back'); if (bk) bk.onclick = () => { su.step = Math.max(0, su.step - 1); su.err = ''; render(); };
   const fin = $('#su-finish'); if (fin) fin.onclick = finishSetup;
+  const si = $('#su-import'); if (si) { si.onclick = () => $('#su-file').click(); $('#su-file').onchange = e => importBackup(e.target); }
 }
 async function finishSetup() {
   const bw = parseFloat(su.bw), age = parseInt(su.age, 10), lb = su.units === 'kg' ? bw / KG : bw;
@@ -772,7 +774,7 @@ function viewHome() {
     const last = lastPerformed(r.id);
     return '<div class="lrow" data-start-routine="' + esc(r.id) + '"><div class="grow"><div class="t">' + esc(r.name) + '</div><div class="s">' + r.items.length + ' exercises' + (last ? ' · last ' + C.fmtDate(last) : ' · never done') + '</div></div><span class="btn ghost sm">Start</span></div>';
   }).join('');
-  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + installCard() + iosCard('home') + systemCard() + todayCard() + backupCard() + levelCard() + dailyQuestCard() + questCard() +
+  return '<div class="top"><h1>Arise</h1><span class="kicker">' + state.sessions.length + ' workouts</span></div>' + movedCard() + installCard() + iosCard('home') + systemCard() + todayCard() + backupCard() + levelCard() + dailyQuestCard() + questCard() +
     '<button class="btn primary full" id="start-empty" style="margin:4px 0 16px">Start empty workout</button>' +
     '<div class="kicker" style="margin:0 4px 6px">Routines</div><div class="card" style="padding:4px 12px">' + (routines || '<div class="empty small">No routines yet. Build one in the Routines tab.</div>') + '</div>' + recentCard();
 }
@@ -1673,6 +1675,21 @@ function backupCard() {
     '<div class="small muted" style="margin-top:2px">Save a backup file so a lost or reset phone does not take your ' + state.sessions.length + ' workouts with it.' + (h.lastExport ? ' Last backup ' + C.fmtDate(h.lastExport) + '.' : '') + '</div>' +
     '<div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost sm" id="backup-later">Later</button><button class="btn primary sm" id="backup-now">Export backup</button></div></div>';
 }
+// a backup file replaces everything on this phone (asks first when there is a log to lose)
+async function importBackup(input) {
+  const f = input.files[0]; if (!f) return;
+  let o; try { o = JSON.parse(await f.text()); } catch (err) { toast('Not valid JSON', 'rd'); input.value = ''; return; }
+  const d = o && o.data && typeof o.data === 'object' ? o.data : o;
+  const valid = d && typeof d === 'object' && Array.isArray(d.sessions) && d.profile && typeof d.profile === 'object' &&
+    d.sessions.every(s => s && typeof s.date === 'number' && Array.isArray(s.entries) && s.entries.every(en => typeof en.exId === 'string' && Array.isArray(en.sets)));
+  if (!valid) { toast('File does not look like an Arise backup', 'rd'); input.value = ''; return; }
+  if (!state.sessions.length || await confirmDlg('Replace all data?', 'This will overwrite your current ' + state.sessions.length + ' workouts with the ' + d.sessions.length + ' in the file. Export first if unsure.', 'Replace', true)) {
+    state = Object.assign(DEFAULT(), d); state.profile = Object.assign(DEFAULT().profile, d.profile, { setupDone: true }); state.game = Object.assign(DEFAULT().game, d.game || {}); if (!Array.isArray(state.game.unseen)) state.game.unseen = [];
+    ['routines', 'custom'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; }); normPlan(); if (!state.exRest || typeof state.exRest !== 'object') state.exRest = {};
+    buildEx(); invalidate(); save(); toast('Imported ' + state.sessions.length + ' workouts'); render();
+  }
+  input.value = '';
+}
 function exportBackup() {
   const blob = new Blob([JSON.stringify({ app: 'arise', version: 1, exportedAt: new Date().toISOString(), data: state }, null, 1)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'arise-backup-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -1680,7 +1697,16 @@ function exportBackup() {
   toast('Backup saved. Keep the file somewhere safe, like cloud storage or email.');
 }
 // ---------- invite: the app's own address, shared or shown as a QR code ----------
-function appUrl() { return location.origin + location.pathname.replace(/index\.html$/, ''); }
+// links and QR codes always give the app's public home (the local address while testing)
+const HOME_URL = 'https://arise-hunters.vercel.app/';
+function appUrl() { return /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? location.origin + location.pathname.replace(/index\.html$/, '') : HOME_URL; }
+// the old github.io address is closing: anyone still on it moves their log to the new home
+function movedCard() {
+  if (!/\.github\.io$/.test(location.hostname)) return '';
+  return '<div class="card quest" id="moved-card" style="border-left-color:var(--gr)"><div class="kicker">New address</div><div style="font-weight:600;margin-top:2px">Arise has moved to ' + HOME_URL.replace(/^https:\/\/|\/$/g, '') + '</div>' +
+    '<div class="small muted" style="margin-top:4px;line-height:1.5">This address is closing soon, and your log is saved for this address only, so bring it with you: <b class="cy">1.</b> Export a backup here. <b class="cy">2.</b> Open the new address, add it to your home screen, and tap <b class="cy">Have a backup? Import it</b> on the first screen.</div>' +
+    '<div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost sm" id="moved-export">Export backup</button><button class="btn primary sm" id="moved-open">Open new address</button></div></div>';
+}
 const SHARE_TEXT = 'Train like a Hunter. Arise is a free strength tracker: open the link and add it to your home screen.';
 async function shareApp() {
   const url = appUrl();
@@ -1804,20 +1830,7 @@ function bindProfile() {
   if (!showData) return;
   $('#p-export').onclick = exportBackup;
   $('#p-import').onclick = () => $('#p-file').click();
-  $('#p-file').onchange = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    let o; try { o = JSON.parse(await f.text()); } catch (err) { toast('Not valid JSON', 'rd'); return; }
-    const d = o && o.data && typeof o.data === 'object' ? o.data : o;
-    const valid = d && typeof d === 'object' && Array.isArray(d.sessions) && d.profile && typeof d.profile === 'object' &&
-      d.sessions.every(s => s && typeof s.date === 'number' && Array.isArray(s.entries) && s.entries.every(en => typeof en.exId === 'string' && Array.isArray(en.sets)));
-    if (!valid) { toast('File does not look like an Arise backup', 'rd'); e.target.value = ''; return; }
-    if (await confirmDlg('Replace all data?', 'This will overwrite your current ' + state.sessions.length + ' workouts with the ' + d.sessions.length + ' in the file. Export first if unsure.', 'Replace', true)) {
-      state = Object.assign(DEFAULT(), d); state.profile = Object.assign(DEFAULT().profile, d.profile); state.game = Object.assign(DEFAULT().game, d.game || {}); if (!Array.isArray(state.game.unseen)) state.game.unseen = [];
-      ['routines', 'custom'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; }); normPlan(); if (!state.exRest || typeof state.exRest !== 'object') state.exRest = {};
-      buildEx(); invalidate(); save(); toast('Imported ' + state.sessions.length + ' workouts'); render();
-    }
-    e.target.value = '';
-  };
+  $('#p-file').onchange = e => importBackup(e.target);
   $('#p-erase').onclick = async () => {
     if (!(await confirmDlg('Erase everything?', 'All workouts, routines and progress on this device will be deleted. This cannot be undone.', 'Erase', true))) return;
     if (!(await confirmDlg('Last chance', 'Really erase ' + state.sessions.length + ' workouts?', 'Yes, erase', true))) return;
@@ -1867,6 +1880,8 @@ function afterRender() {
     const sh = $('#see-history'); if (sh) sh.onclick = () => { sub = { view: 'history' }; render(); };
     const hi = $('#home-install'); if (hi) hi.onclick = doInstall;
     const il = $('#ios-later'); if (il) il.onclick = () => { state.hints.iosLater = Date.now() + 14 * DAY; save(); render(); };
+    const me = $('#moved-export'); if (me) me.onclick = exportBackup;
+    const mo = $('#moved-open'); if (mo) mo.onclick = () => window.open(HOME_URL, '_blank', 'noopener');
     const bn = $('#backup-now'); if (bn) bn.onclick = () => { exportBackup(); render(); };
     const bl = $('#backup-later'); if (bl) bl.onclick = () => { state.hints.backupLater = Date.now() + 14 * DAY; save(); render(); toast('Backup reminder snoozed for two weeks.'); };
     const ts = $('#today-start'); if (ts) ts.onclick = e => { e.stopPropagation(); const pr = plannedRoutine(todayKey()); if (pr) startWorkout(pr.r); };

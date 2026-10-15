@@ -1,0 +1,12 @@
+# Only the app goes online; tests, build tools and source art stay in the repo.
+e2e/
+tools/
+art/src/
+art/README.md
+anatomy.js
+tests.js
+README.md
+.gitignore
+BUILD-PROMPT.md
+.env*
+.vercel/

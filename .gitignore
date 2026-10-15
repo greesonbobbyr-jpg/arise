@@ -1,2 +1,5 @@
 BUILD-PROMPT.md
 __pycache__/
+
+.vercel
+.env*

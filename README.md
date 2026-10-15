@@ -21,13 +21,13 @@ Personal strength-training PWA. Logs workouts Hevy-style, then tells you in plai
 | `icons/` | 192, 512 and 512-maskable icons |
 | `tests.js` | Math test suite (`node tests.js`) |
 
-## Deploy to GitHub Pages
+## Deploy
 
-1. Create a repo and push these files to its root (or a `docs/` folder).
-2. Settings → Pages → Source: the branch and folder you pushed to.
-3. Open the Pages URL in Chrome on Android, then Menu → Add to Home screen (or use the Install button on the Profile tab).
+Arise lives at **https://arise-hunters.vercel.app** (Vercel project `arise-hunter`, connected to this GitHub repo): every push to `main` deploys it. `.vercelignore` keeps the tests, build tools and source art off the site. Share links and the QR code always give that address (`HOME_URL` in `index.html`), except when running locally for the tests.
 
-Everything is relative-pathed, so it works from a subfolder like `username.github.io/arise/`.
+It used to be served from GitHub Pages; that address shows a "New address" card on Home with Export backup and Open new address, and the first setup screen at the new address offers "Have a backup? Import it". A log is stored per address, so moving it takes that export and import.
+
+Everything is relative-pathed, so the app also works from a subfolder.
 
 The service worker is network-first: every open fetches the live files (bypassing the HTTP cache) and only falls back to the cached copy when offline or when the network takes more than 3.5 s. A deploy shows up on the very next open. Bump `APP_VERSION` in `index.html` (shown at the bottom of Profile) and `VERSION` in `sw.js` when you release, so you can tell versions apart.
 

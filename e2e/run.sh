@@ -24,6 +24,7 @@ FLOWS=(
   "titles|$B?demo&sealedall#workout|390|titles"
   "sound|$B?demo#profile|390|sound"
   "setup|$B|390|setup"
+  "move|$B|390|move"
   "women|$B?demo#profile|360|women"
   "aura|$B?demo#progress|390|aura-share"
   "q360|$B?demo#profile|360|overflow"
